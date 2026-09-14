@@ -49,5 +49,17 @@
     ]
   },
   "ItemSoundSetId": "ISS_Items_Leather",
-  "DropOnDeath": true
+  "DropOnDeath": true,
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        {
+          "Type": "OpenCustomUI",
+          "Page": {
+            "Id": "ObolPurse"
+          }
+        }
+      ]
+    }
+  }
 }

@@ -544,9 +544,11 @@ def render_icon(model, texture, rotation=ICON_ROTATION, size=ICON_SIZE, fit=0.9,
 
 def item_json():
     """Obol_Purse.json, calque sur les items a modele vanilla (quiver, sacs).
-    Un seul item : le contenu vit dans les metadonnees du stack, le tooltip
-    (ItemDisplayMetadata) dit le montant. Les interactions (page, don)
-    arrivent avec le code, pas ici."""
+    Un seul item : la bourse est une cle vers un wallet d'Obol, le stack ne
+    porte que cette cle et un tooltip (ItemDisplayMetadata) qui dit le
+    montant. Le clic droit ouvre la page "ObolPurse", fournie par le plugin
+    (PursePageSupplier) : page de la bourse, ou popup de don si un joueur est
+    vise, comme le kit de reparation vanilla (Tool_Repair_Kit_Crude.json)."""
     return {
         "$Comment": "Genere par tmp/purse.py, ne pas editer a la main.",
         "TranslationProperties": {
@@ -580,6 +582,13 @@ def item_json():
         "Tags": {"Type": ["Utility"], "Family": ["Leather"]},
         "ItemSoundSetId": "ISS_Items_Leather",
         "DropOnDeath": True,
+        "Interactions": {
+            "Secondary": {
+                "Interactions": [
+                    {"Type": "OpenCustomUI", "Page": {"Id": "ObolPurse"}},
+                ],
+            },
+        },
     }
 
 

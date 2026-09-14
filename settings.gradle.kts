@@ -15,4 +15,4 @@ plugins {
 
 rootProject.name = "obol"
 
-include("api", "core")
+include("api", "core", "addons:purse")

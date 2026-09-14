@@ -1,0 +1,17 @@
+// One tier of a coin row in the purse page: the count, then the coin, the
+// image being Obol's own (Common/UI/Custom/Obol/Copper.png, from Obol's pack).
+// Appended by CoinsUi for each tier shown; the count is set through
+// "#Copper #Count.Text". TextColor is Denomination.COPPER.color().
+Group #Copper {
+  LayoutMode: Left;
+
+  Label #Count {
+    Text: "0";
+    Style: (FontSize: 20, TextColor: #B87333, RenderBold: true, VerticalAlignment: Center);
+  }
+
+  Group {
+    Background: (TexturePath: "../Obol/Copper.png");
+    Anchor: (Width: 22, Height: 22, Left: 3, Right: 8);
+  }
+}

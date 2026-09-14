@@ -1,0 +1,47 @@
+// The confirmation asked before handing a purse's content to the player in
+// the crosshair (GivePopup). #Question is set by the server.
+$C = "../Common.ui";
+$Sounds = "../Sounds.ui";
+
+$C.@PageOverlay {
+  LayoutMode: Middle;
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 420);
+
+    #Title {
+      $C.@Title {
+        @Text = "Hand over";
+      }
+    }
+
+    #Content {
+      Padding: (Vertical: 24, Horizontal: 32);
+
+      Label #Question {
+        Anchor: (Bottom: 20);
+        Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, Wrap: true, FontSize: 18, TextColor: #ffffff);
+      }
+
+      Group {
+        LayoutMode: Center;
+
+        $C.@TextButton #YesButton {
+          @Sounds = $Sounds.@SaveSettings;
+          @Anchor = (Right: 4);
+          Text: "Yes";
+          FlexWeight: 1;
+        }
+
+        $C.@SecondaryTextButton #NoButton {
+          @Sounds = $Sounds.@ButtonsCancel;
+          @Anchor = (Left: 4);
+          Text: "No";
+          FlexWeight: 1;
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

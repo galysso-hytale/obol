@@ -1,0 +1,93 @@
+// The purse page, opened by a right-click with the purse in hand
+// (PursePage). Two coin rows are filled by the server, one tier document
+// (Copper.ui, Silver.ui, ...) per tier, appended into #Balance and #Purse.
+// The amount field's value travels with the "Put in" click ("#Amount.Value").
+$C = "../Common.ui";
+$Sounds = "../Sounds.ui";
+
+@Caption = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, RenderUppercase: true, RenderBold: true, FontSize: 13);
+
+$C.@PageOverlay {
+  LayoutMode: Middle;
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 460);
+
+    #Title {
+      $C.@Title {
+        @Text = "Purse";
+      }
+    }
+
+    #Content {
+      Padding: (Vertical: 24, Horizontal: 32);
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 32, Bottom: 6);
+
+        Label {
+          Text: "Your balance";
+          Anchor: (Width: 150);
+          Style: @Caption;
+        }
+
+        Group #Balance {
+          LayoutMode: Left;
+        }
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Height: 32, Bottom: 14);
+
+        Label {
+          Text: "In the purse";
+          Anchor: (Width: 150);
+          Style: @Caption;
+        }
+
+        Group #Purse {
+          LayoutMode: Left;
+        }
+      }
+
+      Label #Notice {
+        Anchor: (Bottom: 8);
+        Style: (...$C.@DefaultLabelStyle, Wrap: true, TextColor: #ffcc00);
+        Visible: false;
+      }
+
+      $C.@TextField #Amount {
+        Anchor: (Height: 44, Bottom: 10);
+        PlaceholderText: "Amount, e.g. 2g 35s";
+        MaxLength: 32;
+      }
+
+      Group {
+        LayoutMode: Center;
+
+        $C.@TextButton #PutButton {
+          @Sounds = $Sounds.@SaveSettings;
+          @Anchor = (Right: 4);
+          Text: "Put in";
+          FlexWeight: 1;
+        }
+
+        $C.@SecondaryTextButton #PutAllButton {
+          @Anchor = (Left: 4, Right: 4);
+          Text: "Put all";
+          FlexWeight: 1;
+        }
+
+        $C.@SecondaryTextButton #TakeAllButton {
+          @Anchor = (Left: 4);
+          Text: "Take all";
+          FlexWeight: 1;
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

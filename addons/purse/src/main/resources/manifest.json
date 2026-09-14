@@ -1,0 +1,25 @@
+{
+    "Group": "Galysso",
+    "Name": "obol-purse",
+    "Version": "0.1.0",
+    "Description": "A purse item to carry, store and hand over coins.",
+    "Authors": [
+        {
+            "Name": "Galysso"
+        }
+    ],
+    "Website": "https://github.com/galysso/obol",
+    "DisabledByDefault": false,
+    "IncludesAssetPack": true,
+    "Dependencies": {
+        "Galysso:obol": ">=0.2.0"
+    },
+    "OptionalDependencies": {
+        
+    },
+    "ServerVersion": ">=0.6.0 <0.7.0",
+    "Main": "dev.galysso.obol.purse.PursePlugin",
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}
