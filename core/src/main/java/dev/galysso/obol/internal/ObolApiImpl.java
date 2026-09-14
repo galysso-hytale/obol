@@ -1,6 +1,5 @@
 package dev.galysso.obol.internal;
 
-import dev.galysso.obol.api.BalanceStore;
 import dev.galysso.obol.api.ObolApi;
 import dev.galysso.obol.api.WalletId;
 import dev.galysso.obol.api.internal.ObolRuntime;
@@ -14,15 +13,17 @@ import java.util.concurrent.locks.Lock;
  */
 public final class ObolApiImpl implements ObolApi, ObolRuntime {
 
-    // Both services are wired in the next step (WalletLocks + BalanceStoreImpl).
+    private final WalletLocks locks = new WalletLocks();
+    private final BalanceStoreImpl balances = new BalanceStoreImpl();
 
+    /** Covariant on purpose: the persistence layer needs the implementation. */
     @Override
-    public BalanceStore balances() {
-        throw new UnsupportedOperationException("BalanceStore is not wired yet");
+    public BalanceStoreImpl balances() {
+        return balances;
     }
 
     @Override
     public Lock lockFor(WalletId id) {
-        throw new UnsupportedOperationException("Wallet locks are not wired yet");
+        return locks.lockFor(id);
     }
 }

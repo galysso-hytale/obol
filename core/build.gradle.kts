@@ -20,6 +20,16 @@ dependencies {
     implementation(project(":api"))
 }
 
+// WalletLocks and BalanceStoreImpl are plain JDK code: they are unit-tested
+// here, with no server in the loop, like the `api` module.
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter("5.13.4")
+        }
+    }
+}
+
 hytaleTools {
     // hytaleVersion / patchline / manifestGroup are inherited from hytaleWorkspace.
     javaVersion = property("java_version").toString().toInt()
