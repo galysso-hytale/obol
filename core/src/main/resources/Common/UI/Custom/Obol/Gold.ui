@@ -2,14 +2,21 @@
 // pill by CoinsHud for each tier shown; the count is set through
 // "#Gold #Count.Text". The count sits right-aligned in a column sized for
 // two digits, so the icons never shift with the digits (tabular figures).
-// TextColor is Denomination.GOLD.color().
+// TextColor of @Normal is Denomination.GOLD.color(). @Up and @Down are
+// the styles CoinsHud switches the count to while the amount is rolling
+// towards a gain or a loss ("#Gold #Count.Style"), tinted so that the
+// direction can be read even when the digits go by too fast.
+@Normal = (FontSize: 22, TextColor: #FFD700, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+@Up = (...@Normal, TextColor: #8CFF8C);
+@Down = (...@Normal, TextColor: #FF7A7A);
+
 Group #Gold {
   LayoutMode: Left;
 
   Label #Count {
     Text: "0";
     Anchor: (Width: 30);
-    Style: (FontSize: 22, TextColor: #FFD700, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
+    Style: @Normal;
   }
 
   Group {

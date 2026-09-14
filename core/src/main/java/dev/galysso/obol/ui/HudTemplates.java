@@ -22,6 +22,10 @@ import java.util.Map;
  * {@link #PACK_DIR}) so that the coin image next to each count resolves
  * relative to a real file. The count is set afterwards through a selector,
  * so no text ever needs escaping into markup.</p>
+ *
+ * <p>Each tier document also declares the three styles of its count
+ * ({@link Tint}): the tier's own colour, and the two it takes while the
+ * amount rolls towards a gain or a loss.</p>
  */
 public final class HudTemplates {
 
@@ -118,6 +122,47 @@ public final class HudTemplates {
     }
 
     /**
+     * {@return which tiers to tint while the amount rolls from
+     * {@code before} to {@code after}, and in which direction}
+     *
+     * <p>Only what the player will see move: a tier that is shown for
+     * {@code after} and whose count differs from the one it had for
+     * {@code before}. The direction is that of the amount as a whole, not
+     * of each count — a silver count that goes up because a gold coin was
+     * broken is still a loss.</p>
+     */
+    public static Map<Denomination, Tint> changed(Coins before, Coins after) {
+        EnumMap<Denomination, Tint> tints = new EnumMap<>(Denomination.class);
+        Tint direction = after.compareTo(before) > 0 ? Tint.UP : Tint.DOWN;
+        EnumMap<Denomination, Long> was = before.breakdown();
+        for (Tier tier : tiers(after)) {
+            if (tier.count() != was.get(tier.denomination())) {
+                tints.put(tier.denomination(), direction);
+            }
+        }
+        return tints;
+    }
+
+    /**
+     * The styles a count can take, as the tier documents name them
+     * ({@code @Normal}, {@code @Up}, {@code @Down}).
+     */
+    public enum Tint {
+        /** The tier's own colour. */
+        NORMAL,
+        /** The amount is growing. */
+        UP,
+        /** The amount is shrinking. */
+        DOWN;
+
+        /** {@return the name of the style in the tier document} */
+        public String styleName() {
+            String lower = name().toLowerCase(Locale.ROOT);
+            return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+        }
+    }
+
+    /**
      * One tier of the pill: which document to append and what count to set
      * in it.
      *
@@ -140,6 +185,15 @@ public final class HudTemplates {
         /** {@return the selector of the count label, for {@code set}} */
         public String countSelector() {
             return "#" + name() + " #Count.Text";
+        }
+
+        /**
+         * {@return the selector of the count label's style, for {@code set}
+         * with a reference to one of the {@link Tint} styles of
+         * {@link #document()}}
+         */
+        public String styleSelector() {
+            return "#" + name() + " #Count.Style";
         }
 
         /**

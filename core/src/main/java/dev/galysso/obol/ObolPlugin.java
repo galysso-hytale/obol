@@ -42,7 +42,7 @@ public class ObolPlugin extends JavaPlugin {
         api = new ObolApiImpl(
                 (listener, event, e) -> getLogger().atSevere().withCause(e)
                         .log("Listener %s failed on %s", listener.getClass().getName(), event),
-                new ServerHuds(getLogger()));
+                new ServerHuds(getLogger(), HytaleServer.SCHEDULED_EXECUTOR));
         // withConfig() is only allowed before setup(): the server refuses it
         // once the plugin state has moved on.
         balancesFile = withConfig("balances", BalancesState.CODEC);

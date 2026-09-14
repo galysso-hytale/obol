@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -69,7 +70,36 @@ class HudTemplatesTest {
         HudTemplates.Tier gold = tier(Denomination.GOLD, 35);
         assertEquals("Obol/Gold.ui", gold.document());
         assertEquals("#Gold #Count.Text", gold.countSelector());
+        assertEquals("#Gold #Count.Style", gold.styleSelector());
         assertEquals("35", gold.countText());
+    }
+
+    @Test
+    void tintsNameTheStylesOfTheTierDocuments() {
+        assertEquals("Normal", HudTemplates.Tint.NORMAL.styleName());
+        assertEquals("Up", HudTemplates.Tint.UP.styleName());
+        assertEquals("Down", HudTemplates.Tint.DOWN.styleName());
+    }
+
+    @Test
+    void onlyTheCountsThatMoveAreTinted() {
+        // +2g on 1g 5s 4c: silver and copper do not move.
+        assertEquals(Map.of(Denomination.GOLD, HudTemplates.Tint.UP),
+                HudTemplates.changed(Coins.of(0, 1, 5, 4), Coins.of(0, 3, 5, 4)));
+        // A first coin: copper alone, up.
+        assertEquals(Map.of(Denomination.COPPER, HudTemplates.Tint.UP),
+                HudTemplates.changed(Coins.ZERO, Coins.ofCopper(5)));
+        // A tier that appears is a count that moved.
+        assertEquals(Map.of(Denomination.GOLD, HudTemplates.Tint.UP, Denomination.SILVER, HudTemplates.Tint.UP),
+                HudTemplates.changed(Coins.of(0, 0, 90, 1), Coins.of(0, 1, 10, 1)));
+    }
+
+    @Test
+    void theTintFollowsTheAmountNotTheCount() {
+        // 1g - 1s = 99s: the silver count goes up, the amount goes down. The
+        // gold tier is no longer shown, so it is not tinted; copper stays 0.
+        assertEquals(Map.of(Denomination.SILVER, HudTemplates.Tint.DOWN),
+                HudTemplates.changed(Coins.of(0, 1, 0, 0), Coins.of(0, 0, 99, 0)));
     }
 
     @Test
@@ -100,7 +130,12 @@ class HudTemplatesTest {
         assertTrue(document.contains(denomination == Denomination.largest()
                 ? "Anchor: (MinWidth: " : "Anchor: (Width: "), "column sized for two digits");
         assertTrue(document.contains("Background: \"" + tier.name() + ".png\";"), "image next to the count");
-        assertTrue(document.contains("TextColor: " + denomination.color()), "palette from Denomination");
+        assertTrue(document.contains("Style: @Normal;"), "the count starts in the tier's own colour");
+        for (HudTemplates.Tint tint : HudTemplates.Tint.values()) {
+            assertTrue(document.contains("@" + tint.styleName() + " = ("), "style " + tint.styleName());
+        }
+        assertTrue(document.contains("@Normal = (FontSize: 22, TextColor: " + denomination.color()),
+                "palette from Denomination");
         try (InputStream in = HudTemplatesTest.class.getResourceAsStream(base + ".png")) {
             assertNotNull(in, base + ".png");
             byte[] header = in.readNBytes(8);
