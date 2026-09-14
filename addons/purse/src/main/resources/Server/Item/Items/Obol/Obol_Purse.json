@@ -61,5 +61,55 @@
         }
       ]
     }
+  },
+  "State": {
+    "Copper": {
+      "Variant": true,
+      "Icon": "Icons/ItemsGenerated/Obol_Purse_Copper.png",
+      "Model": "Items/Obol/Purse_Full.blockymodel",
+      "Texture": "Items/Obol/Purse_Copper_Texture.png",
+      "Recipe": null,
+      "Quality": "Obol_Copper",
+      "ItemEntity": {
+        "ParticleSystemId": "Drop_Obol_Copper"
+      }
+    },
+    "Silver": {
+      "Variant": true,
+      "Icon": "Icons/ItemsGenerated/Obol_Purse_Silver.png",
+      "Model": "Items/Obol/Purse_Full.blockymodel",
+      "Texture": "Items/Obol/Purse_Silver_Texture.png",
+      "Recipe": null,
+      "Quality": "Obol_Silver",
+      "ItemEntity": {
+        "ParticleSystemId": "Drop_Obol_Silver"
+      }
+    },
+    "Gold": {
+      "Variant": true,
+      "Icon": "Icons/ItemsGenerated/Obol_Purse_Gold.png",
+      "Model": "Items/Obol/Purse_Full.blockymodel",
+      "Texture": "Items/Obol/Purse_Gold_Texture.png",
+      "Recipe": null,
+      "Quality": "Obol_Gold",
+      "ItemEntity": {
+        "ParticleSystemId": "Drop_Obol_Gold"
+      }
+    },
+    "Mythril": {
+      "Variant": true,
+      "Icon": "Icons/ItemsGenerated/Obol_Purse_Mythril.png",
+      "Model": "Items/Obol/Purse_Full.blockymodel",
+      "Texture": "Items/Obol/Purse_Mythril_Texture.png",
+      "Recipe": null,
+      "Quality": "Obol_Mythril",
+      "ItemEntity": {
+        "ParticleSystemId": "Drop_Obol_Mythril"
+      },
+      "Light": {
+        "Color": "#023",
+        "Radius": 1
+      }
+    }
   }
 }

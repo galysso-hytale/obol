@@ -16,31 +16,37 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsParseException;
+import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.Obol;
 import dev.galysso.obol.purse.PurseOps;
 import dev.galysso.obol.purse.api.PurseItem;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
- * The page of a purse held in hand: the player's balance, the purse's
- * content, an amount field and three buttons (put that amount in, put the
- * whole balance in, take everything out).
+ * The page of a purse held in hand: two panels, the player's balance and
+ * the purse's content, each with its total and one row per coin tier, and
+ * on each row buttons sending 1 or 10 coins of that tier across to the
+ * other panel. Two more buttons move everything either way.
  *
  * <p>The page remembers where the purse was when it opened (container and
  * slot) and reads the slot again at each click, so a purse moved meanwhile
  * is noticed, not overwritten. After each action the page is rebuilt from
- * the store, and the last message is shown under the two amounts. The HUD
- * feed of Obol shows the debit or credit on its own.</p>
+ * the store, and the last message, if the action was refused, is shown
+ * under the rows. The HUD feed of Obol shows the debit or credit on its
+ * own.</p>
  *
- * <p>The client sends back {@link Event}: the button's action, and for
- * "Put in" the text of the amount field, taken at click time
- * ({@code @Amount} bound to {@code #Amount.Value}).</p>
+ * <p>The client sends back {@link Event}: the button's action, and for the
+ * per-tier buttons the tier and the count, all decided server side when
+ * the buttons were bound.</p>
  */
 public final class PursePage extends InteractiveCustomUIPage<PursePage.Event> {
 
     private static final String DOCUMENT = "ObolPurse/Purse.ui";
+    private static final String MINE = "#Mine";
+    private static final String PURSE = "#Purse";
+    private static final int[] STEPS = {1, 10};
 
     private final PurseOps ops;
     private final ItemContainer container;
@@ -68,22 +74,39 @@ public final class PursePage extends InteractiveCustomUIPage<PursePage.Event> {
         ItemStack stack = container.getItemStack(slot);
         boolean held = PurseItem.isPurse(stack);
         Coins content = held ? ops.content(stack) : Coins.ZERO;
-        CoinsUi.coins(commands, "#Balance", balance);
-        CoinsUi.coins(commands, "#Purse", content);
+        commands.set(MINE + " #Total.Text", balance.toString());
+        commands.set(PURSE + " #Total.Text", content.toString());
+        Map<Denomination, Long> yours = balance.breakdown();
+        Map<Denomination, Long> purse = content.breakdown();
+        for (Denomination tier : Denomination.values()) {
+            String row = " #" + PurseItem.stateName(tier);
+            commands.set(MINE + row + " #Count.Text", Long.toString(yours.get(tier)));
+            commands.set(PURSE + row + " #Count.Text", Long.toString(purse.get(tier)));
+            for (int step : STEPS) {
+                Coins coins = Coins.of(tier, step);
+                bind(commands, events, MINE + row + " #Put" + step, Action.PUT, tier, step, held && balance.covers(coins));
+                bind(commands, events, PURSE + row + " #Take" + step, Action.TAKE, tier, step, held && content.covers(coins));
+            }
+        }
         if (notice != null) {
             commands.set("#Notice.Text", notice);
             commands.set("#Notice.Visible", true);
         }
-        boolean canPut = held && !balance.equals(Coins.ZERO);
-        commands.set("#PutButton.Disabled", !canPut);
-        commands.set("#PutAllButton.Disabled", !canPut);
+        commands.set("#PutAllButton.Disabled", !held || balance.equals(Coins.ZERO));
         commands.set("#TakeAllButton.Disabled", !held || content.equals(Coins.ZERO));
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#PutButton",
-                EventData.of(Event.ACTION, Action.PUT.name()).append(Event.AMOUNT, "#Amount.Value"));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#PutAllButton",
                 EventData.of(Event.ACTION, Action.PUT_ALL.name()));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#TakeAllButton",
                 EventData.of(Event.ACTION, Action.TAKE_ALL.name()));
+    }
+
+    private static void bind(UICommandBuilder commands, UIEventBuilder events, String selector,
+                             Action action, Denomination tier, int count, boolean enabled) {
+        commands.set(selector + ".Disabled", !enabled);
+        events.addEventBinding(CustomUIEventBindingType.Activating, selector,
+                EventData.of(Event.ACTION, action.name())
+                        .append(Event.TIER, tier.name())
+                        .append(Event.COUNT, Integer.toString(count)));
     }
 
     @Override
@@ -93,27 +116,19 @@ public final class PursePage extends InteractiveCustomUIPage<PursePage.Event> {
             return;
         }
         PurseOps.Outcome outcome = switch (action) {
-            case PUT -> put(event.amount);
+            case PUT -> ops.put(playerRef.getUuid(), container, slot, inventory, event.coins());
+            case TAKE -> ops.take(playerRef.getUuid(), container, slot, event.coins());
             case PUT_ALL -> ops.putAll(playerRef.getUuid(), container, slot, inventory);
             case TAKE_ALL -> ops.takeAll(playerRef.getUuid(), container, slot);
         };
-        notice = outcome.message();
+        // The rows say what moved. Only a refusal needs words.
+        notice = outcome.ok() ? null : outcome.message();
         rebuild();
     }
 
-    private PurseOps.Outcome put(String text) {
-        Coins amount;
-        try {
-            amount = Coins.parse(text == null ? "" : text.trim());
-        } catch (CoinsParseException e) {
-            return PurseOps.Outcome.refused(e.getMessage() + ". Example: 2g 35s");
-        }
-        return ops.put(playerRef.getUuid(), container, slot, inventory, amount);
-    }
-
-    /** The three buttons. */
+    /** The buttons: per tier and count, or everything. */
     enum Action {
-        PUT, PUT_ALL, TAKE_ALL;
+        PUT, TAKE, PUT_ALL, TAKE_ALL;
 
         static Action of(String name) {
             for (Action action : values()) {
@@ -126,26 +141,40 @@ public final class PursePage extends InteractiveCustomUIPage<PursePage.Event> {
     }
 
     /**
-     * What the client sends back on a click. A mutable bag of fields, as
-     * {@link BuilderCodec} wants. {@code amount} is only present for
-     * {@link Action#PUT}.
+     * What the client sends back on a click, as it was bound: the action,
+     * and for {@link Action#PUT} and {@link Action#TAKE} the tier and the
+     * count. A mutable bag of fields, as {@link BuilderCodec} wants.
      */
     public static final class Event {
 
         static final String ACTION = "Action";
-        /** Leading {@code @}: the client fills it from the selector bound to it. */
-        static final String AMOUNT = "@Amount";
+        static final String TIER = "Tier";
+        static final String COUNT = "Count";
 
         static final BuilderCodec<Event> CODEC = BuilderCodec
                 .builder(Event.class, Event::new)
                 .append(new KeyedCodec<>(ACTION, Codec.STRING), (e, v) -> e.action = v, e -> e.action).add()
-                .append(new KeyedCodec<>(AMOUNT, Codec.STRING), (e, v) -> e.amount = v, e -> e.amount).add()
+                .append(new KeyedCodec<>(TIER, Codec.STRING), (e, v) -> e.tier = v, e -> e.tier).add()
+                .append(new KeyedCodec<>(COUNT, Codec.STRING), (e, v) -> e.count = v, e -> e.count).add()
                 .build();
 
         String action;
-        String amount;
+        String tier;
+        String count;
 
         public Event() {
+        }
+
+        /**
+         * {@return the amount the button stands for, {@link Coins#ZERO} if
+         * the fields do not read as one (the operation then refuses it)}
+         */
+        Coins coins() {
+            try {
+                return Coins.of(Denomination.valueOf(tier), Long.parseLong(count));
+            } catch (RuntimeException e) {
+                return Coins.ZERO;
+            }
         }
     }
 }

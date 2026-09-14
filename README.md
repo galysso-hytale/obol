@@ -9,7 +9,9 @@ every player (and anything else that should hold coins), an API to move
 them, and a readable display of the result.
 
 - Just a currency. No shops, taxes or jobs: what Obol does to your server
-  is what the mods built on it do; gameplay belongs to add-ons.
+  is what the mods built on it do; gameplay belongs to add-ons. The first
+  one, [Obol Purse](addons/purse/README.md), is a craftable purse that
+  carries coins from hand to hand, chest or floor.
 - Four coins, copper to mythril, so 1 <img src="core/src/main/resources/Common/UI/Custom/Obol/Mythril.png" alt="mythril" height="16" align="absmiddle"> 2 <img src="core/src/main/resources/Common/UI/Custom/Obol/Gold.png" alt="gold" height="16" align="absmiddle"> 35 <img src="core/src/main/resources/Common/UI/Custom/Obol/Silver.png" alt="silver" height="16" align="absmiddle"> 4 <img src="core/src/main/resources/Common/UI/Custom/Obol/Copper.png" alt="copper" height="16" align="absmiddle"> reads at a glance.
 
 ## Players and server owners
@@ -97,6 +99,11 @@ A wallet is a stateless handle on an entry of Obol's store: an id nobody has
 written to holds zero, and an entry is never removed on its own. `kind` is
 your mod's namespace. Every wallet gets the same rules, transfers, events and
 displays as a player's.
+
+That is all [Obol Purse](addons/purse/README.md) needs: a purse is a
+`WalletId("purse", <uuid>)` whose key travels in the item's metadata, and
+filling, emptying or handing it over are three `transferTo` calls. The
+add-on writes no money code of its own.
 
 ### Showing coins
 
@@ -218,7 +225,10 @@ Two modules: `api` (`java-library`, JDK-only, published as
 plugin, `manifest.json`, one jar that also contains `api`). `core/src/main/
 resources` is the asset pack (`Common/UI/Custom/Obol/<Tier>.{ui,png}`; the
 64×64 originals are in `tmp/`). Identity and versions live in
-`gradle.properties`; `manifest.json` is generated from it.
+`gradle.properties`; `manifest.json` is generated from it. Add-ons are
+sub-projects under `addons/` (`addons/purse`), each a plugin of its own with
+its own version, built and run alone or with everything else
+(`./gradlew runAllMods`).
 
 Requires **JDK 25** for the Gradle daemon itself; Gradle provisions it on
 first run (`gradle/gradle-daemon-jvm.properties`).

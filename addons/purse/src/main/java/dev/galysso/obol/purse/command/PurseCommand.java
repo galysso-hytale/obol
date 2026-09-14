@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -23,7 +24,7 @@ import dev.galysso.obol.purse.ui.PursePage;
 import java.util.Objects;
 
 /**
- * {@code /purse put <amount>}, {@code /purse take}, {@code /purse open}:
+ * {@code /purse put <amount>}, {@code /purse take [amount]}, {@code /purse open}:
  * the purse in the active hotbar slot, driven from the chat. A testing
  * aid, not the way players use purses (they right-click), hence one
  * permission node, {@code obol.purse.debug}, granted to
@@ -113,14 +114,29 @@ public final class PurseCommand extends CommandBase {
 
     private static final class Take extends Sub {
 
+        private final OptionalArg<String> amount;
+
         Take(PurseOps ops) {
-            super(ops, "take", "Takes everything out of the purse in hand.");
+            super(ops, "take", "Takes an amount, or everything, out of the purse in hand.");
+            amount = withOptionalArg("amount", "Amount, e.g. 2g 35s. Everything if left out.", ArgTypes.GREEDY_STRING);
         }
 
         @Override
         void apply(CommandContext context, Store<EntityStore> store, Ref<EntityStore> ref,
                    PlayerRef playerRef, ItemContainer container, short slot, ItemContainer inventory) {
-            PurseOps.Outcome outcome = ops.takeAll(playerRef.getUuid(), container, slot);
+            PurseOps.Outcome outcome;
+            if (amount.provided(context)) {
+                Coins coins;
+                try {
+                    coins = Coins.parse(amount.get(context));
+                } catch (CoinsParseException e) {
+                    context.sendMessage(Message.raw(e.getMessage() + ". Example: 2g 35s"));
+                    return;
+                }
+                outcome = ops.take(playerRef.getUuid(), container, slot, coins);
+            } else {
+                outcome = ops.takeAll(playerRef.getUuid(), container, slot);
+            }
             context.sendMessage(Message.raw(outcome.message()));
         }
     }

@@ -1,0 +1,15 @@
+{
+  "QualityValue": 2,
+  "ItemTooltipTexture": "UI/ItemQualities/Obol/Tooltip_Copper.png",
+  "ItemTooltipArrowTexture": "UI/ItemQualities/Obol/TooltipArrow_Copper.png",
+  "SlotTexture": "UI/ItemQualities/Obol/Slot_Copper.png",
+  "BlockSlotTexture": "UI/ItemQualities/Obol/Slot_Copper.png",
+  "SpecialSlotTexture": "UI/ItemQualities/Obol/Slot_Copper.png",
+  "TextColor": "#B87333",
+  "LocalizationKey": "server.general.qualities.Obol_Copper",
+  "VisibleQualityLabel": true,
+  "RenderSpecialSlot": true,
+  "ItemEntityConfig": {
+    "ParticleSystemId": "Drop_Obol_Copper"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "RenderMode": "BlendLinear",
+  "EmitOffset": {
+    "X": {
+      "Min": -0.25,
+      "Max": 0.25
+    },
+    "Y": {
+      "Min": 0.0,
+      "Max": 0.1
+    },
+    "Z": {
+      "Min": -0.25,
+      "Max": 0.25
+    }
+  },
+  "ParticleRotationInfluence": "Billboard",
+  "MaxConcurrentParticles": 3,
+  "ParticleLifeSpan": {
+    "Min": 1.6,
+    "Max": 2.4
+  },
+  "ParticleRotateWithSpawner": false,
+  "TrailSpawnerPositionMultiplier": 1,
+  "TrailSpawnerRotationMultiplier": 1,
+  "SpawnRate": {
+    "Min": 0.64,
+    "Max": 0.96
+  },
+  "InitialVelocity": {
+    "Pitch": {
+      "Min": 90.0,
+      "Max": 90.0
+    },
+    "Speed": {
+      "Min": 0.12,
+      "Max": 0.2
+    }
+  },
+  "Particle": {
+    "Texture": "Particles/Textures/Obol/Silver.png",
+    "ScaleRatioConstraint": "OneToOne",
+    "UVOption": "None",
+    "Animation": {
+      "0": {
+        "Opacity": 0.0
+      },
+      "15": {
+        "Opacity": 1.0
+      },
+      "65": {
+        "Opacity": 1.0
+      },
+      "100": {
+        "Opacity": 0.0
+      }
+    },
+    "InitialAnimationFrame": {
+      "Scale": {
+        "X": {
+          "Min": 0.12,
+          "Max": 0.16
+        },
+        "Y": {
+          "Min": 0.12,
+          "Max": 0.16
+        }
+      },
+      "Opacity": 0.0,
+      "Color": "#ffffff"
+    }
+  },
+  "LinearFiltering": false
+}

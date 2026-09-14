@@ -1,0 +1,27 @@
+{
+  "CullDistance": 30.0,
+  "Spawners": [
+    {
+      "SpawnerId": "Drop_Obol_Copper_Ground",
+      "PositionOffset": {
+        "Y": 0.1
+      },
+      "FixedRotation": true,
+      "StartDelay": 0.5
+    },
+    {
+      "SpawnerId": "Drop_Obol_Copper_Ray",
+      "PositionOffset": {
+        "Y": 0.6
+      },
+      "StartDelay": 0.2
+    },
+    {
+      "SpawnerId": "Drop_Obol_Copper_Coins",
+      "PositionOffset": {
+        "Y": 0.25
+      },
+      "StartDelay": 0.8
+    }
+  ]
+}

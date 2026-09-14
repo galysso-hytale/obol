@@ -14,10 +14,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * The three things one does with a purse: put coins in from one's balance,
- * take everything out, hand everything to another player. Each is a
+ * What one does with a purse: put coins in from one's balance, take coins
+ * out of it, hand everything to another player. Each is a
  * {@link Wallet#transferTo} between Obol wallets, followed by a rewrite of
- * the item in its slot.
+ * the item in its slot (tooltip and state, see {@link PurseItem}).
  *
  * <p>The item is rewritten by compare-and-swap
  * ({@link ItemContainer#replaceItemStackInSlot}): if the slot no longer
@@ -129,6 +129,30 @@ public final class PurseOps {
     }
 
     /**
+     * Moves {@code amount} from the purse in {@code slot} of
+     * {@code container} into the player's balance.
+     */
+    public Outcome take(UUID player, ItemContainer container, short slot, Coins amount) {
+        ItemStack stack = container.getItemStack(slot);
+        if (!PurseItem.isPurse(stack)) {
+            return Outcome.refused(MOVED);
+        }
+        if (amount.equals(Coins.ZERO)) {
+            return Outcome.refused("The amount must be more than 0c.");
+        }
+        Optional<WalletId> id = PurseItem.walletId(stack);
+        if (id.isEmpty()) {
+            return Outcome.refused("The purse is empty.");
+        }
+        Wallet purse = Obol.wallet(id.get());
+        if (!purse.transferTo(Obol.playerWallet(player), amount)) {
+            return Outcome.refused("The purse only holds " + purse.balance() + ".");
+        }
+        refresh(container, slot, stack, id.get(), purse);
+        return Outcome.moved(amount, "Took " + amount + " out of the purse.");
+    }
+
+    /**
      * Moves everything the purse holds into the player's balance and
      * leaves the purse empty.
      */
@@ -219,9 +243,9 @@ public final class PurseOps {
     }
 
     /**
-     * Rewrites the purse in {@code slot} after a transfer: the tooltip with
-     * the new balance, or an empty purse (and no wallet entry any more)
-     * when the balance is zero.
+     * Rewrites the purse in {@code slot} after a transfer: the tooltip and
+     * the state of the new balance, or an empty purse (and no wallet entry
+     * any more) when the balance is zero.
      */
     private void refresh(ItemContainer container, short slot, ItemStack current, WalletId id, Wallet purse) {
         Coins balance = purse.balance();

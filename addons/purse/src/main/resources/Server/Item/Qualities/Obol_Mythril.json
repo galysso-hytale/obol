@@ -1,0 +1,15 @@
+{
+  "QualityValue": 5,
+  "ItemTooltipTexture": "UI/ItemQualities/Obol/Tooltip_Mythril.png",
+  "ItemTooltipArrowTexture": "UI/ItemQualities/Obol/TooltipArrow_Mythril.png",
+  "SlotTexture": "UI/ItemQualities/Obol/Slot_Mythril.png",
+  "BlockSlotTexture": "UI/ItemQualities/Obol/Slot_Mythril.png",
+  "SpecialSlotTexture": "UI/ItemQualities/Obol/Slot_Mythril.png",
+  "TextColor": "#7FDBFF",
+  "LocalizationKey": "server.general.qualities.Obol_Mythril",
+  "VisibleQualityLabel": true,
+  "RenderSpecialSlot": true,
+  "ItemEntityConfig": {
+    "ParticleSystemId": "Drop_Obol_Mythril"
+  }
+}

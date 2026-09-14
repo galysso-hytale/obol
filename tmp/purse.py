@@ -2,21 +2,33 @@
 """
 Generateur de l'item bourse de l'add-on Obol Purse.
 
-Un seul item, Obol_Purse, quel que soit son contenu. Il est construit comme
-un item vanilla : un modele 3D .blockymodel (l'objet tenu en main, au sol,
-dans un coffre), une texture peinte 64x64 et une icone rendue depuis ce
-modele avec la camera des icones vanilla (IconProperties.Rotation
+Un seul item, Obol_Purse, et quatre etats (Copper, Silver, Gold, Mythril)
+dans le meme JSON, un par plus gros palier de pieces contenu. Il est
+construit comme un item vanilla : un modele 3D .blockymodel (l'objet tenu en
+main, au sol, dans un coffre), une texture peinte 64x64 et une icone rendue
+depuis ce modele avec la camera des icones vanilla (IconProperties.Rotation
 [22.5, 45, 22.5]), comme le fait le pipeline « ItemsGenerated » du jeu.
 
+La bourse vide est plate, cordon de cuir sombre. Une bourse qui contient
+quelque chose est rebondie, et son cordon prend la couleur de la piece
+(Denomination.color() dans l'API d'Obol) : la silhouette dit « il y a
+quelque chose », le cordon dit quoi. Chaque etat porte aussi une rarete a
+la couleur de la piece (tmp/qualities.py : cadre de la case et du tooltip)
+et un halo au sol (tmp/halos.py).
+
 Produit dans addons/purse/src/main/resources/ :
-  Common/Items/Obol/Purse.blockymodel
-  Common/Items/Obol/Purse_Texture.png
+  Common/Items/Obol/Purse.blockymodel               bourse vide, plate
+  Common/Items/Obol/Purse_Full.blockymodel          bourse pleine, rebondie
+  Common/Items/Obol/Purse_Texture.png               vide
+  Common/Items/Obol/Purse_<Palier>_Texture.png      un par etat
   Common/Icons/ItemsGenerated/Obol_Purse.png
-  Server/Item/Items/Obol/Obol_Purse.json
+  Common/Icons/ItemsGenerated/Obol_Purse_<Palier>.png
+  Server/Item/Items/Obol/Obol_Purse.json            l'item et ses etats
   Server/Languages/en-US/server.lang
 
 et dans tmp/ :
-  _purse_apercu.png     icone x3, icone a 24 px, texture x3, trois vues du modele
+  _purse_apercu.png     les cinq icones x3, icone a 24 px, texture x3, trois
+                        vues du modele plein
   _purse_check.png      la routine de rendu appliquee au Feedbag vanilla, a cote
                         de l'icone Food_Flour livree par le jeu : si les deux se
                         ressemblent, les conventions (faces, rotations, lumiere)
@@ -123,9 +135,12 @@ def face_dims(size, face):
     return w, d
 
 
-def purse_boxes():
+def purse_boxes(full):
     """La bourse, a la maniere des items vanilla (l'oeuf est un cube, le sac de
     farine trois boites) : peu de boites, la rondeur dans la texture.
+
+    `full` : le ventre est plus large et plus haut, la bourse est pleine.
+    Vide, elle est plus plate, comme un sac de cuir qui pend.
 
     Son identite, comme celle des pieces, tient a une silhouette et une
     couleur : un ventre a huit pans (deux boites croisees a 45 degres, ce que
@@ -134,12 +149,20 @@ def purse_boxes():
     porte, et la cordelette en or. Pas d'emblème : rien a lire, juste a
     reconnaitre."""
     b = []
-    b.append(Box("Bottom", (11, 2, 11), (0, 1, 0), "body"))
-    b.append(Box("Belly", (13, 8, 13), (0, 6, 0), "body"))
-    b.append(Box("Belly_X", (12, 7.5, 12), (0, 6, 0), "body",
-                 orientation=q_axis((0, 1, 0), 45)))
-    b.append(Box("Shoulder", (9, 2.5, 9), (0, 11.25, 0), "body",
-                 orientation=q_axis((0, 1, 0), 45)))
+    if full:
+        b.append(Box("Bottom", (12, 2, 12), (0, 1, 0), "body"))
+        b.append(Box("Belly", (14, 9, 14), (0, 6.5, 0), "body"))
+        b.append(Box("Belly_X", (13, 8.5, 13), (0, 6.5, 0), "body",
+                     orientation=q_axis((0, 1, 0), 45)))
+        b.append(Box("Shoulder", (10, 2.5, 10), (0, 11.5, 0), "body",
+                     orientation=q_axis((0, 1, 0), 45)))
+    else:
+        b.append(Box("Bottom", (10, 2, 8), (0, 1, 0), "body"))
+        b.append(Box("Belly", (12, 8, 9), (0, 6, 0), "body"))
+        b.append(Box("Belly_X", (11, 7.5, 8), (0, 6, 0), "body",
+                     orientation=q_axis((0, 1, 0), 45)))
+        b.append(Box("Shoulder", (8, 2.5, 7), (0, 11.25, 0), "body",
+                     orientation=q_axis((0, 1, 0), 45)))
     b.append(Box("Neck", (6, 3, 6), (0, 14, 0), "pleats"))
     b.append(Box("Cord", (7.5, 1.5, 7.5), (0, 13.75, 0), "cord"))
     b.append(Box("Knot", (2.5, 2.5, 1.2), (0, 13.75, 4.2), "cord"))
@@ -244,9 +267,27 @@ def model_json(boxes):
 # pour ne pas se fondre dans le bleu nuit des cases d'inventaire (V ~0.3).
 LEATHER = {"light": (214, 118, 88), "base": (168, 70, 56), "dark": (112, 42, 38),
            "seam": (60, 20, 20)}
-# Cordelette en or, la couleur des pieces d'Obol.
-CORD = {"light": (255, 226, 120), "base": (224, 176, 44), "dark": (162, 112, 26)}
 HOLE = (48, 16, 18)
+
+# Les pieces d'Obol, Denomination.color() de l'API : le cordon d'une bourse
+# pleine est de la couleur de son plus gros palier.
+TIERS = {"Copper": "#B87333", "Silver": "#C0C0C0", "Gold": "#FFD700", "Mythril": "#7FDBFF"}
+# La lueur de la bourse de mythril : la teinte de la piece, presque eteinte.
+MYTHRIL_GLOW = "#023"
+
+
+def cord_palette(color):
+    """Trois tons de cordelette a partir d'une couleur : `color` en ton de
+    base, un reflet vers le blanc, une ombre. `color` en hexa ou en RGB."""
+    if isinstance(color, str):
+        color = tuple(int(color[i:i + 2], 16) for i in (1, 3, 5))
+    return {"light": lerp(color, (255, 255, 255), 0.45), "base": color,
+            "dark": lerp(color, (0, 0, 0), 0.32)}
+
+
+# Cordon de cuir sombre, aucune couleur de piece : la bourse vide. Le
+# chanvre clair se confondait avec le cuivre a la taille d'une icone.
+EMPTY_CORD = (110, 62, 44)
 
 
 def lerp(a, b, t):
@@ -326,28 +367,30 @@ def paint_hole(px, rect):
             px[x0 + x, y0 + y] = c + (255,)
 
 
-def paint_cord(px, rect, seed):
+def paint_cord(px, rect, seed, cord):
     x0, y0, w, h = rect
     rnd = random.Random(seed)
     for y in range(h):
         for x in range(w):
             k = (x + y) % 3
-            c = (CORD["light"], CORD["base"], CORD["dark"])[k]
+            c = (cord["light"], cord["base"], cord["dark"])[k]
             g = rnd.randint(-5, 5)
             px[x0 + x, y0 + y] = tuple(max(0, min(255, v + g)) for v in c) + (255,)
 
 
-def paint_tassel(px, rect):
+def paint_tassel(px, rect, cord):
     x0, y0, w, h = rect
     for y in range(h):
         for x in range(w):
-            c = CORD["dark"] if y % 2 else CORD["base"]
+            c = cord["dark"] if y % 2 else cord["base"]
             if y == h - 1:
-                c = CORD["light"]
+                c = cord["light"]
             px[x0 + x, y0 + y] = c + (255,)
 
 
-def paint_texture(boxes):
+def paint_texture(boxes, cord):
+    """La texture du modele, cuir et cordon `cord` (une palette de
+    cord_palette)."""
     img = Image.new("RGBA", (TEX_SIZE, TEX_SIZE), (0, 0, 0, 0))
     px = img.load()
     painted = set()
@@ -370,9 +413,9 @@ def paint_texture(boxes):
                 else:
                     paint_pleats(px, rect, seed)
             elif m == "cord":
-                paint_cord(px, rect, seed)
+                paint_cord(px, rect, seed, cord)
             elif m == "tassel":
-                paint_tassel(px, rect)
+                paint_tassel(px, rect, cord)
     return img
 
 
@@ -548,7 +591,37 @@ def item_json():
     porte que cette cle et un tooltip (ItemDisplayMetadata) qui dit le
     montant. Le clic droit ouvre la page "ObolPurse", fournie par le plugin
     (PursePageSupplier) : page de la bourse, ou popup de don si un joueur est
-    vise, comme le kit de reparation vanilla (Tool_Repair_Kit_Crude.json)."""
+    vise, comme le kit de reparation vanilla (Tool_Repair_Kit_Crude.json).
+
+    Les quatre etats ("State", comme le seau vanilla Container_Bucket.json)
+    heritent de tout le reste et ne changent que le visuel : modele plein,
+    texture et icone du palier, rarete du palier (Obol_<Palier>, de
+    tmp/qualities.py : cadre de la case, cadre et couleur du nom dans le
+    tooltip, etiquette), halo au sol (ItemEntity.ParticleSystemId, systemes
+    de tmp/halos.py, le meme que celui de la rarete), et une lueur faible
+    sur Mythril. Le serveur
+    les charge sous l'id "*Obol_Purse_<Palier>" et le plugin y passe par
+    ItemStack.withState("<Palier>"). "Recipe": null pour qu'on ne puisse
+    crafter que des bourses vides, "Variant" pour les cacher de la
+    bibliotheque d'items, comme les poissons vanilla par rarete."""
+    states = {}
+    for tier, color in TIERS.items():
+        state = {
+            "Variant": True,
+            "Icon": "Icons/ItemsGenerated/Obol_Purse_%s.png" % tier,
+            "Model": "Items/Obol/Purse_Full.blockymodel",
+            "Texture": "Items/Obol/Purse_%s_Texture.png" % tier,
+            "Recipe": None,
+            "Quality": "Obol_%s" % tier,
+            "ItemEntity": {"ParticleSystemId": "Drop_Obol_%s" % tier},
+        }
+        if tier == "Mythril":
+            # La couleur est l'intensite : les essences vanilla (Ice_Essence
+            # "#023", Memory_Particle "#015") luisent a peine, avec des
+            # couleurs presque noires et un rayon de 1. La pleine couleur de
+            # la piece a ce rayon eclairait comme une torche de poche.
+            state["Light"] = {"Color": MYTHRIL_GLOW, "Radius": 1}
+        states[tier] = state
     return {
         "$Comment": "Genere par tmp/purse.py, ne pas editer a la main.",
         "TranslationProperties": {
@@ -589,13 +662,19 @@ def item_json():
                 ],
             },
         },
+        "State": states,
     }
 
 
 def lang():
-    return ("items.Obol_Purse.name = Purse\n"
+    """server.lang : le nom et la description de l'item, et l'etiquette de
+    chaque rarete (sous le nom dans le tooltip, comme « Legendary »)."""
+    text = ("items.Obol_Purse.name = Purse\n"
             "items.Obol_Purse.description = A leather purse. Right-click to put coins in "
             "or take them out, right-click a player to hand them what it holds.\n")
+    for tier in TIERS:
+        text += "general.qualities.Obol_%s = %s\n" % (tier, tier)
+    return text
 
 
 # =============================================================================
@@ -606,15 +685,17 @@ def zoom(img, k):
     return img.resize((img.width * k, img.height * k), Image.NEAREST)
 
 
-def preview(icon, texture, model):
+def preview(icons, texture, model):
+    """`icons` : les icones dans l'ordre vide, cuivre, argent, or, mythril."""
     views = [render_icon(model, texture, rotation=r, size=96, perspective=0, pitch=0)
              for r in ((0, 0, 0), (0, 90, 0), (90, 0, 0))]
-    w = 64 * 3 + 8 + 24 + 8 + 64 * 3 + 8 + len(views) * (96 + 8) + 8
+    w = len(icons) * (64 * 3 + 8) + 24 + 8 + 64 * 3 + 8 + len(views) * (96 + 8) + 8
     sheet = Image.new("RGBA", (w, 64 * 3 + 16), (28, 30, 36, 255))
     x = 8
-    sheet.paste(zoom(icon, 3), (x, 8), zoom(icon, 3))
-    x += 64 * 3 + 8
-    small = icon.resize((24, 24), Image.LANCZOS)
+    for icon in icons:
+        sheet.paste(zoom(icon, 3), (x, 8), zoom(icon, 3))
+        x += 64 * 3 + 8
+    small = icons[0].resize((24, 24), Image.LANCZOS)
     sheet.paste(small, (x, 8), small)
     x += 24 + 8
     sheet.paste(zoom(texture, 3), (x, 8), zoom(texture, 3))
@@ -649,23 +730,38 @@ if __name__ == "__main__":
     for path in (MODEL_DIR, ICON_DIR, ITEM_DIR, LANG_DIR):
         os.makedirs(path, exist_ok=True)
 
-    boxes = purse_boxes()
-    pack_uv(boxes)
-    texture = paint_texture(boxes)
-    model = model_json(boxes)
-    icon = render_icon(model, texture)
+    def write_model(name, model):
+        with open(os.path.join(MODEL_DIR, name + ".blockymodel"), "w") as f:
+            json.dump(model, f, indent=2)
+            f.write("\n")
 
+    # La bourse vide : plate, cordon de cuir sombre.
+    boxes = purse_boxes(full=False)
+    pack_uv(boxes)
+    texture = paint_texture(boxes, cord_palette(EMPTY_CORD))
+    model = model_json(boxes)
+    icons = [render_icon(model, texture)]
     texture.save(os.path.join(MODEL_DIR, "Purse_Texture.png"))
-    with open(os.path.join(MODEL_DIR, "Purse.blockymodel"), "w") as f:
-        json.dump(model, f, indent=2)
-        f.write("\n")
-    icon.save(os.path.join(ICON_DIR, "Obol_Purse.png"))
+    write_model("Purse", model)
+    icons[0].save(os.path.join(ICON_DIR, "Obol_Purse.png"))
+
+    # Les etats : un modele plein, une texture et une icone par palier.
+    boxes = purse_boxes(full=True)
+    pack_uv(boxes)
+    model = model_json(boxes)
+    write_model("Purse_Full", model)
+    for tier, color in TIERS.items():
+        texture = paint_texture(boxes, cord_palette(color))
+        texture.save(os.path.join(MODEL_DIR, "Purse_%s_Texture.png" % tier))
+        icon = render_icon(model, texture)
+        icon.save(os.path.join(ICON_DIR, "Obol_Purse_%s.png" % tier))
+        icons.append(icon)
     with open(os.path.join(ITEM_DIR, "Obol_Purse.json"), "w") as f:
         json.dump(item_json(), f, indent=2)
         f.write("\n")
     with open(os.path.join(LANG_DIR, "server.lang"), "w") as f:
         f.write(lang())
 
-    preview(icon, texture, model)
+    preview(icons, texture, model)
     check_against_vanilla()
     print("ok")
