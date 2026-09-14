@@ -71,6 +71,34 @@ class BalanceStoreImplTest {
     }
 
     @Test
+    void loadReplacesEverythingWithoutDirtying() {
+        store.set(id, Coins.ofCopper(1));
+        store.snapshot();
+
+        store.load(Map.of("shop:smith", 300L));
+
+        assertFalse(store.exists(id));
+        assertEquals(Coins.ofCopper(300), store.balance(new WalletId("shop", "smith")));
+        assertFalse(store.isDirty());
+    }
+
+    @Test
+    void loadRefusesNegativeValuesBeforeTouchingTheStore() {
+        store.set(id, Coins.ofCopper(1));
+        assertThrows(IllegalArgumentException.class,
+                () -> store.load(Map.of("player:a", 5L, "player:b", -1L)));
+        assertEquals(Coins.ofCopper(1), store.balance(id));
+    }
+
+    @Test
+    void markDirtyForcesTheNextSnapshot() {
+        store.snapshot();
+        assertFalse(store.isDirty());
+        store.markDirty();
+        assertTrue(store.isDirty());
+    }
+
+    @Test
     void nullArgumentsRejected() {
         assertThrows(NullPointerException.class, () -> store.balance(null));
         assertThrows(NullPointerException.class, () -> store.set(null, Coins.ZERO));

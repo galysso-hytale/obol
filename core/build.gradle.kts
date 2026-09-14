@@ -60,6 +60,13 @@ tasks.withType<Javadoc>().configureEach {
         .addStringOption("Xdoclint:-missing", "-quiet")
 }
 
+// In dev, hytale-tools links run/mods/Galysso_obol to src/main/resources, so
+// the server's data directory *is* the resources folder and balances.json
+// lands there. Never ship it.
+tasks.named<ProcessResources>("processResources") {
+    exclude("balances.json", "balances.json.bak")
+}
+
 // Ship a single jar: API classes are bundled alongside the implementation so
 // the server sees one plugin, while `obol-api` stays publishable alone.
 tasks.named<Jar>("jar") {
