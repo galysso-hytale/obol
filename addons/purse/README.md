@@ -6,7 +6,7 @@ A purse for [Obol](../../README.md): a craftable item that carries coins.
 Fill it from your balance, drop it, chest it, lose it, hand it to someone.
 The purse is never used up.
 
-- **Craft it** from 2 light leather and 1 wool scrap.
+- **Craft it** from 2 light hides and 2 fibre, in the pocket crafting menu (Tools) or at the workbench (Survival).
 - **Right-click** with it in hand: your balance on the left, the purse on
   the right, one row per coin on each side with buttons that send 1 or 10
   of that coin across, and two more that move everything.

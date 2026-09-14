@@ -30,15 +30,30 @@
   "Recipe": {
     "Input": [
       {
-        "ItemId": "Ingredient_Leather_Light",
+        "ItemId": "Ingredient_Hide_Light",
         "Quantity": 2
       },
       {
-        "ItemId": "Ingredient_Fabric_Scrap_Wool",
-        "Quantity": 1
+        "ItemId": "Ingredient_Fibre",
+        "Quantity": 2
       }
     ],
-    "BenchRequirement": []
+    "BenchRequirement": [
+      {
+        "Type": "Crafting",
+        "Id": "Fieldcraft",
+        "Categories": [
+          "Tools"
+        ]
+      },
+      {
+        "Type": "Crafting",
+        "Id": "Workbench",
+        "Categories": [
+          "Workbench_Survival"
+        ]
+      }
+    ]
   },
   "Tags": {
     "Type": [

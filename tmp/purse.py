@@ -646,11 +646,18 @@ def item_json():
         },
         "Recipe": {
             "Input": [
-                {"ItemId": "Ingredient_Leather_Light", "Quantity": 2},
-                {"ItemId": "Ingredient_Fabric_Scrap_Wool", "Quantity": 1},
+                {"ItemId": "Ingredient_Hide_Light", "Quantity": 2},
+                {"ItemId": "Ingredient_Fibre", "Quantity": 2},
             ],
-            # A trancher en jeu : a la main ou sur un etabli.
-            "BenchRequirement": [],
+            # Matieres brutes seulement, comme tout le craft de poche
+            # vanilla (le lit rudimentaire : 3 fibres, 2 peaux brutes).
+            # Une recette sans etabli n'apparait nulle part : le craft de
+            # poche est l'etabli virtuel "Fieldcraft" (une seule categorie,
+            # "Tools"). Meme rattachement que le lit et le petit coffre.
+            "BenchRequirement": [
+                {"Type": "Crafting", "Id": "Fieldcraft", "Categories": ["Tools"]},
+                {"Type": "Crafting", "Id": "Workbench", "Categories": ["Workbench_Survival"]},
+            ],
         },
         "Tags": {"Type": ["Utility"], "Family": ["Leather"]},
         "ItemSoundSetId": "ISS_Items_Leather",
