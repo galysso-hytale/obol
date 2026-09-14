@@ -3,6 +3,7 @@ package dev.galysso.obol.ui;
 import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.ScreenPosition;
+import dev.galysso.obol.api.event.CoinsChangedEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,14 @@ final class RecordingHuds implements OverlayHuds {
             @Override
             public void setCoins(Coins coins) {
                 calls.add(key + " text \"" + format.format(coins) + "\"");
+            }
+
+            @Override
+            public void log(CoinsChangedEvent change) {
+                Coins amount = change.increased()
+                        ? change.after().minus(change.before()).orElseThrow()
+                        : change.before().minus(change.after()).orElseThrow();
+                calls.add(key + " log " + (change.increased() ? "+" : "-") + format.format(amount));
             }
 
             @Override

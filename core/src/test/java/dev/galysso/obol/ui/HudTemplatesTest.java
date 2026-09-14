@@ -39,16 +39,56 @@ class HudTemplatesTest {
     }
 
     @Test
-    void theDocumentIsPlacedAndCarriesTheEmptyPill() {
+    void theDocumentIsPlacedAndCarriesTheEmptyPillAndFeed() {
+        int height = HudTemplates.PILL_HEIGHT + ChangeFeed.MAX_ROWS * (HudTemplates.ROW_HEIGHT + HudTemplates.ROW_GAP);
         String right = HudTemplates.document(CoinsFormat.STANDARD, ScreenPosition.bottomRight(5, 6));
         assertTrue(right.contains("LayoutMode: Right;"));
-        assertTrue(right.contains("Anchor: (Bottom: 6, Right: 5, Height: 36);"));
+        assertTrue(right.contains("LayoutMode: Bottom;"), "stacked from the bottom: the feed above the pill");
+        assertTrue(right.contains("Anchor: (Bottom: 6, Right: 5, Height: " + height + ");"));
         assertTrue(right.contains("Group " + HudTemplates.PILL + " {"));
+        assertTrue(right.contains("Group " + HudTemplates.FEED + " {"));
         assertFalse(right.contains("%"), "every placeholder is filled");
 
         String left = HudTemplates.document(CoinsFormat.STANDARD, ScreenPosition.topLeft(5, 6));
         assertTrue(left.contains("LayoutMode: Left;"));
-        assertTrue(left.contains("Anchor: (Top: 6, Left: 5, Height: 36);"));
+        assertTrue(left.contains("LayoutMode: Top;"));
+        assertFalse(left.contains("Bottom"));
+        assertTrue(left.contains("Anchor: (Top: 6, Left: 5, Height: " + height + ");"));
+    }
+
+    @Test
+    void aFeedRowPacksAgainstTheSideAndKeepsAGap() {
+        String right = HudTemplates.feedRow(ScreenPosition.topRight(1, 1));
+        assertTrue(right.contains("LayoutMode: Right;"));
+        assertTrue(right.contains("Anchor: (Height: " + HudTemplates.ROW_HEIGHT + ", Top: " + HudTemplates.ROW_GAP + ");"));
+        assertTrue(right.contains("Group " + HudTemplates.CHANGE + " {"));
+        assertFalse(right.contains("%"));
+        String bottomLeft = HudTemplates.feedRow(ScreenPosition.bottomLeft(1, 1));
+        assertTrue(bottomLeft.contains("LayoutMode: Left;"));
+        assertTrue(bottomLeft.contains("Bottom: " + HudTemplates.ROW_GAP + ");"));
+        assertEquals("#Feed[3]", HudTemplates.feedRow(3));
+    }
+
+    @Test
+    void aChangeShowsOnlyItsNonZeroTiers() {
+        assertEquals(List.of(tier(Denomination.GOLD, 2), tier(Denomination.COPPER, 5)),
+                HudTemplates.feedTiers(Coins.of(0, 2, 0, 5)));
+        assertEquals(List.of(tier(Denomination.COPPER, 1)), HudTemplates.feedTiers(Coins.ofCopper(1)));
+        assertEquals("+2", tier(Denomination.GOLD, 2).signedCountText(true));
+        assertEquals("-15", tier(Denomination.SILVER, 15).signedCountText(false));
+        assertEquals("Obol/Feed/Gold.ui", tier(Denomination.GOLD, 2).feedDocument());
+        assertEquals("#Gold #Icon", tier(Denomination.GOLD, 2).iconSelector());
+    }
+
+    @Test
+    void fadeStylesAndColoursAreNamedPerLevel() {
+        assertEquals("Up", HudTemplates.Tint.UP.styleName(0));
+        assertEquals("Down2", HudTemplates.Tint.DOWN.styleName(2));
+        // Eight-digit hex, alpha last: the only form a patched colour takes.
+        assertEquals("#FFFFFFFF", HudTemplates.withOpacity("#FFFFFF", 1.0));
+        assertEquals("#FFFFFFBF", HudTemplates.withOpacity("#FFFFFF", 0.75));
+        assertEquals("#00000016", HudTemplates.withOpacity("#000000", 0.35 * 0.25));
+        assertEquals("#00000000", HudTemplates.withOpacity("#000000", 0.0));
     }
 
     @Test
@@ -136,6 +176,21 @@ class HudTemplatesTest {
         }
         assertTrue(document.contains("@Normal = (FontSize: 22, TextColor: " + denomination.color()),
                 "palette from Denomination");
+        String feedBase = "/Common/UI/Custom/" + HudTemplates.PACK_DIR + "/" + HudTemplates.FEED_DIR + "/" + tier.name();
+        String feed;
+        try (InputStream in = HudTemplatesTest.class.getResourceAsStream(feedBase + ".ui")) {
+            assertNotNull(in, feedBase + ".ui");
+            feed = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        assertTrue(feed.contains("Group #" + tier.name() + " {"), "feed root id");
+        assertTrue(feed.contains("Label #Count {"), "feed count label");
+        assertTrue(feed.contains("Group #Icon {"), "feed icon, addressable for its tint");
+        assertTrue(feed.contains("Background: (TexturePath: \"../" + tier.name() + ".png\");"), "the pill's image, one directory up");
+        for (HudTemplates.Tint tint : List.of(HudTemplates.Tint.UP, HudTemplates.Tint.DOWN)) {
+            for (int level = 0; level < ChangeFeed.FADE_STEPS; level++) {
+                assertTrue(feed.contains("@" + tint.styleName(level) + " = ("), "feed style " + tint.styleName(level));
+            }
+        }
         try (InputStream in = HudTemplatesTest.class.getResourceAsStream(base + ".png")) {
             assertNotNull(in, base + ".png");
             byte[] header = in.readNBytes(8);

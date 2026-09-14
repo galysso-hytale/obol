@@ -14,6 +14,7 @@ import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.ScreenPosition;
+import dev.galysso.obol.api.event.CoinsChangedEvent;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayDeque;
@@ -45,6 +46,14 @@ import java.util.function.Consumer;
  * patches the counts and their styles; when a tier appears or goes, the
  * document is rebuilt, which is cheaper than editing it for a handful of
  * elements.</p>
+ *
+ * <p>Under the pill, a tracking overlay lists the recent changes of its
+ * wallet ({@link ChangeFeed}): {@code +2 [gold] 50 [silver]} in green,
+ * {@code -15 [silver]} in red, each row for a few seconds, then fading by
+ * steps — text colour, icon tint and background alpha patched together at
+ * every step, since the client has no opacity of its own. A timer at the
+ * feed's tick runs only while the feed has rows; a tick sends one packet
+ * at most, and none when no row changed level.</p>
  */
 final class CoinsHud extends CustomUIHud implements OverlayHud {
 
@@ -66,6 +75,13 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
     private ScheduledFuture<?> roll;
     /** The timer taking the tints off, once the roll has settled. */
     private ScheduledFuture<?> settle;
+    /** The recent changes of the tracked wallet. */
+    private final ChangeFeed feed = new ChangeFeed();
+    /** The rows the client's feed holds, newest first, and their fade levels. */
+    private List<ChangeFeed.Row> feedRows = List.of();
+    private List<Integer> feedLevels = List.of();
+    /** The timer fading and dropping the rows, while the feed has any. */
+    private ScheduledFuture<?> feedTimer;
     /** The client has the document: changes are sent as they come. */
     private boolean shown;
     /** {@link #hide()} was called: nothing is sent any more. */
@@ -88,6 +104,7 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
             patch(builder, tier, true);
         }
         shape = tiers.stream().map(HudTemplates.Tier::denomination).toList();
+        buildFeed(builder, feedRows, feedLevels, true);
     }
 
     @Override
@@ -136,6 +153,24 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
     }
 
     @Override
+    public synchronized void log(CoinsChangedEvent change) {
+        if (!shown || hidden) {
+            // Before the document exists there is no feed to add to, and
+            // the balance shown first is already the one after the change.
+            return;
+        }
+        Coins amount = change.increased()
+                ? change.after().minus(change.before()).orElseThrow()
+                : change.before().minus(change.after()).orElseThrow();
+        feed.add(amount, change.increased(), now());
+        renderFeed();
+        if (feedTimer == null || feedTimer.isDone()) {
+            feedTimer = scheduler.scheduleAtFixedRate(this::feedTick,
+                    ChangeFeed.TICK_MS, ChangeFeed.TICK_MS, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    @Override
     public synchronized void move(ScreenPosition position) {
         this.position = position;
         resend();
@@ -149,6 +184,7 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
         hidden = true;
         cancel(roll);
         cancel(settle);
+        cancel(feedTimer);
         if (shown) {
             onWorldThread(player -> player.getHudManager().removeCustomHud(getPlayerRef(), getKey()));
         }
@@ -172,6 +208,91 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
             logger.atWarning().withCause(e).log("HUD %s of %s stopped rolling", getKey(), getPlayerRef().getUuid());
             cancel(roll);
         }
+    }
+
+    /** One tick of the feed: rows fade a step or go; the timer stops with the last. */
+    private synchronized void feedTick() {
+        try {
+            if (gone()) {
+                cancel(feedTimer);
+                return;
+            }
+            renderFeed();
+            if (feed.isEmpty()) {
+                cancel(feedTimer);
+            }
+        } catch (RuntimeException e) {
+            logger.atWarning().withCause(e).log("HUD %s of %s stopped its feed", getKey(), getPlayerRef().getUuid());
+            cancel(feedTimer);
+        }
+    }
+
+    /**
+     * Brings the client's feed up to date: rebuilt when rows came or went,
+     * patched when some only faded a step, nothing sent otherwise.
+     */
+    private void renderFeed() {
+        long now = now();
+        List<ChangeFeed.Row> rows = feed.rows(now);
+        List<Integer> levels = rows.stream().map(row -> row.level(now)).toList();
+        UICommandBuilder builder = new UICommandBuilder();
+        if (!rows.equals(feedRows)) {
+            buildFeed(builder, rows, levels, false);
+        } else {
+            boolean changed = false;
+            for (int i = 0; i < rows.size(); i++) {
+                if (!levels.get(i).equals(feedLevels.get(i))) {
+                    fade(builder, i, rows.get(i), levels.get(i));
+                    changed = true;
+                }
+            }
+            if (!changed) {
+                return;
+            }
+        }
+        feedRows = rows;
+        feedLevels = levels;
+        send(false, builder);
+    }
+
+    /**
+     * The whole feed, newest row first: into a fresh document, or replacing
+     * the rows the client has.
+     */
+    private void buildFeed(UICommandBuilder builder, List<ChangeFeed.Row> rows, List<Integer> levels, boolean fresh) {
+        if (!fresh) {
+            builder.clear(HudTemplates.FEED);
+        }
+        for (int i = 0; i < rows.size(); i++) {
+            ChangeFeed.Row row = rows.get(i);
+            builder.appendInline(HudTemplates.FEED, HudTemplates.feedRow(position));
+            String chip = HudTemplates.feedRow(i) + " " + HudTemplates.CHANGE;
+            boolean first = true;
+            for (HudTemplates.Tier tier : HudTemplates.feedTiers(row.amount())) {
+                builder.append(chip, tier.feedDocument());
+                builder.set(chip + " " + tier.countSelector(),
+                        first ? tier.signedCountText(row.gain()) : tier.countText());
+                first = false;
+            }
+            fade(builder, i, row, levels.get(i));
+        }
+    }
+
+    /** The colours of one row at that fade level: text, icons, background. */
+    private void fade(UICommandBuilder builder, int index, ChangeFeed.Row row, int level) {
+        String chip = HudTemplates.feedRow(index) + " " + HudTemplates.CHANGE;
+        HudTemplates.Tint tint = row.gain() ? HudTemplates.Tint.UP : HudTemplates.Tint.DOWN;
+        double opacity = ChangeFeed.Row.opacity(level);
+        for (HudTemplates.Tier tier : HudTemplates.feedTiers(row.amount())) {
+            builder.set(chip + " " + tier.styleSelector(), Value.ref(tier.feedDocument(), tint.styleName(level)));
+            builder.set(chip + " " + tier.iconSelector() + ".Background.Color",
+                    HudTemplates.withOpacity("#FFFFFF", opacity));
+        }
+        builder.set(chip + ".Background.Color", HudTemplates.withOpacity("#000000", 0.35 * opacity));
+    }
+
+    private static long now() {
+        return System.nanoTime() / 1_000_000;
     }
 
     /** The roll has settled: the counts take their own colour back. */

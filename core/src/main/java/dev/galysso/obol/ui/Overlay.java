@@ -5,6 +5,7 @@ import dev.galysso.obol.api.CoinsListener;
 import dev.galysso.obol.api.CoinsOverlay;
 import dev.galysso.obol.api.ScreenPosition;
 import dev.galysso.obol.api.Wallet;
+import dev.galysso.obol.api.event.CoinsChangedEvent;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -67,7 +68,7 @@ final class Overlay implements CoinsOverlay {
     CoinsListener subscribe() {
         listener = event -> {
             if (event.wallet().equals(tracked.id())) {
-                refresh();
+                refresh(event);
             }
         };
         return listener;
@@ -81,11 +82,13 @@ final class Overlay implements CoinsOverlay {
     /**
      * Re-reads the balance under the overlay's monitor: two refreshes that
      * race read in the same order they send, so the last one on the wire is
-     * the last state read.
+     * the last state read. The change itself goes to the feed as the event
+     * reports it: exact per transaction, whatever the balance reads now.
      */
-    synchronized void refresh() {
+    synchronized void refresh(CoinsChangedEvent change) {
         if (visible) {
             hud.setCoins(tracked.balance());
+            hud.log(change);
         }
     }
 

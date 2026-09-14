@@ -2,6 +2,7 @@ package dev.galysso.obol.ui;
 
 import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.ScreenPosition;
+import dev.galysso.obol.api.event.CoinsChangedEvent;
 
 /**
  * One overlay as the server sees it: a document on a player's screen whose
@@ -18,6 +19,12 @@ public interface OverlayHud {
 
     /** Changes the amount shown. */
     void setCoins(Coins coins);
+
+    /**
+     * Adds a change of the followed wallet to the overlay's feed of recent
+     * changes. Only a tracking overlay calls it, after {@link #setCoins}.
+     */
+    void log(CoinsChangedEvent change);
 
     /** Moves the document. */
     void move(ScreenPosition position);

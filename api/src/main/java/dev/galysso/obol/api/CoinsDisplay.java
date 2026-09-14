@@ -49,6 +49,10 @@ public interface CoinsDisplay {
      * re-read from the wallet on each change, so the overlay never shows a
      * stale value even when changes race.</p>
      *
+     * <p>A tracking overlay also lists the wallet's recent changes next to
+     * the balance, each for a few seconds: what moved, and in which
+     * direction. A fixed overlay ({@link #show}) has no such feed.</p>
+     *
      * @param viewer   the player to show it to, who must be connected and in
      *                 a world
      * @param position where to put it

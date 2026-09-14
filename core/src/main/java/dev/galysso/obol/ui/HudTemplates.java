@@ -32,27 +32,74 @@ public final class HudTemplates {
     /** Selector of the pill the tier documents are appended into. */
     public static final String PILL = "#Pill";
 
+    /** Selector of the list the rows of the changes feed go into. */
+    public static final String FEED = "#Feed";
+
+    /** Selector, inside a feed row, of the chip the tier documents are appended into. */
+    public static final String CHANGE = "#Change";
+
     /** Directory of the tier documents and images, under {@code Common/UI/Custom/}. */
     public static final String PACK_DIR = "Obol";
 
+    /** Directory of the smaller tier documents of the feed, under {@link #PACK_DIR}. */
+    public static final String FEED_DIR = "Feed";
+
+    /** Height of the balance pill, in UI pixels. */
+    static final int PILL_HEIGHT = 36;
+    /** Height of a feed row and the gap above it, in UI pixels. */
+    static final int ROW_HEIGHT = 26;
+    static final int ROW_GAP = 4;
+
     private static final String LAYOUT = "%LAYOUT%";
+    private static final String STACK = "%STACK%";
     private static final String ANCHOR = "%ANCHOR%";
+    private static final String HEIGHT = "%HEIGHT%";
+    private static final String GAP = "%GAP%";
 
     /**
      * {@link CoinsFormat#STANDARD}: a translucent pill lining up, from the
-     * largest tier down, each count followed by its coin. The outer group
-     * spans the screen edge and packs the pill against the requested corner;
-     * the pill sizes itself to its content.
+     * largest tier down, each count followed by its coin, and under it (over
+     * it, in a bottom corner) the feed of recent changes. The outer group
+     * spans the screen edge, tall enough for the pill and a full feed, and
+     * stacks from the requested corner; each row packs its content against
+     * the corner's side and sizes itself to it.
      */
     private static final String STANDARD = """
             Group {
-              LayoutMode: %LAYOUT%;
-              Anchor: (%ANCHOR%, Height: 36);
+              LayoutMode: %STACK%;
+              Anchor: (%ANCHOR%, Height: %HEIGHT%);
 
-              Group #Pill {
+              Group {
+                LayoutMode: %LAYOUT%;
+                Anchor: (Height: 36);
+
+                Group #Pill {
+                  Background: #000000(0.35);
+                  LayoutMode: Left;
+                  Padding: (Left: 12, Right: 4);
+                }
+              }
+
+              Group #Feed {
+                LayoutMode: %STACK%;
+              }
+            }
+            """;
+
+    /**
+     * One row of the feed: a chip packed against the corner's side, a gap
+     * away from the previous row. Sent inline: it carries no image, the tier
+     * documents appended into the chip do.
+     */
+    private static final String FEED_ROW = """
+            Group {
+              LayoutMode: %LAYOUT%;
+              Anchor: (Height: 26, %GAP%);
+
+              Group #Change {
                 Background: #000000(0.35);
                 LayoutMode: Left;
-                Padding: (Left: 12, Right: 4);
+                Padding: (Left: 8, Right: 2);
               }
             }
             """;
@@ -86,7 +133,56 @@ public final class HudTemplates {
         }
         return template
                 .replace(LAYOUT, position.corner().isRight() ? "Right" : "Left")
+                .replace(STACK, position.corner().isBottom() ? "Bottom" : "Top")
+                .replace(HEIGHT, Integer.toString(PILL_HEIGHT + ChangeFeed.MAX_ROWS * (ROW_HEIGHT + ROW_GAP)))
                 .replace(ANCHOR, anchor(position));
+    }
+
+    /**
+     * {@return the markup of one feed row, for that position}
+     */
+    public static String feedRow(ScreenPosition position) {
+        return FEED_ROW
+                .replace(LAYOUT, position.corner().isRight() ? "Right" : "Left")
+                .replace(GAP, (position.corner().isBottom() ? "Bottom: " : "Top: ") + ROW_GAP);
+    }
+
+    /** {@return the selector of the {@code index}th row of the feed, newest first} */
+    public static String feedRow(int index) {
+        return FEED + "[" + index + "]";
+    }
+
+    /**
+     * {@return the tiers of a change, largest first}
+     *
+     * <p>An amount, not a position: zero tiers are left out, the way
+     * {@link CoinsFormat#STANDARD} writes it ({@code +2g 50s}).</p>
+     */
+    public static List<Tier> feedTiers(Coins amount) {
+        List<Tier> tiers = new ArrayList<>();
+        EnumMap<Denomination, Long> parts = amount.breakdown();
+        Denomination[] all = Denomination.values();
+        for (int i = all.length - 1; i >= 0; i--) {
+            long count = parts.get(all[i]);
+            if (count != 0) {
+                tiers.add(new Tier(all[i], count));
+            }
+        }
+        return tiers;
+    }
+
+    /**
+     * {@return {@code color} ({@code #RRGGBB}) at that opacity, as a
+     * runtime patch of a colour property reads it: {@code #RRGGBBAA}}
+     *
+     * <p>Not the {@code #RRGGBB(0.75)} of the documents: the client's
+     * converter for a patched colour takes the eight-digit form only (the
+     * server's own pages send {@code #RRGGBB99}), and disconnects the
+     * player on anything else.</p>
+     */
+    public static String withOpacity(String color, double opacity) {
+        int alpha = (int) Math.round(Math.clamp(opacity, 0.0, 1.0) * 255);
+        return color + String.format(Locale.ROOT, "%02X", alpha);
     }
 
     /**
@@ -160,6 +256,14 @@ public final class HudTemplates {
             String lower = name().toLowerCase(Locale.ROOT);
             return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
         }
+
+        /**
+         * {@return the name of the style in a feed tier document at that
+         * fade level: {@code Up} in full, then {@code Up1}, {@code Up2}…}
+         */
+        public String styleName(int level) {
+            return level == 0 ? styleName() : styleName() + level;
+        }
     }
 
     /**
@@ -180,6 +284,16 @@ public final class HudTemplates {
         /** {@return the document to append, relative to {@code Common/UI/Custom/}} */
         public String document() {
             return PACK_DIR + "/" + name() + ".ui";
+        }
+
+        /** {@return the smaller document of the feed, relative to {@code Common/UI/Custom/}} */
+        public String feedDocument() {
+            return PACK_DIR + "/" + FEED_DIR + "/" + name() + ".ui";
+        }
+
+        /** {@return the selector of the coin image, for {@code .Background.Color}} */
+        public String iconSelector() {
+            return "#" + name() + " #Icon";
         }
 
         /** {@return the selector of the count label, for {@code set}} */
@@ -205,6 +319,11 @@ public final class HudTemplates {
          */
         public String countText() {
             return Long.toString(count);
+        }
+
+        /** {@return the count with the sign of a change in front: {@code +2}, {@code -15}} */
+        public String signedCountText(boolean gain) {
+            return (gain ? "+" : "-") + count;
         }
     }
 }

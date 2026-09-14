@@ -89,8 +89,11 @@ class CoinsDisplayImplTest {
         assertEquals(List.of(
                 "obol:1 show Top: 10, Right: 20 \"1s\"",
                 "obol:1 text \"1s 50c\"",
+                "obol:1 log +50c",
                 "obol:1 text \"1s 49c\"",
+                "obol:1 log -1c",
                 "obol:1 text \"9c\"",
+                "obol:1 log -1s 40c",
                 "obol:1 hide"),
                 huds.calls);
     }
@@ -125,11 +128,14 @@ class CoinsDisplayImplTest {
         wallet.deposit(Coins.ofCopper(10));
 
         // The nested transfer refreshes first (9c), then the outer deposit's
-        // own event refreshes again and still reads 9c: never 10c.
+        // own event refreshes again and still reads 9c: never 10c. The feed,
+        // on the other hand, gets each change as it was.
         assertEquals(List.of(
                 "obol:1 show Top: 10, Right: 20 \"0c\"",
                 "obol:1 text \"9c\"",
-                "obol:1 text \"9c\""),
+                "obol:1 log -1c",
+                "obol:1 text \"9c\"",
+                "obol:1 log +10c"),
                 huds.calls);
     }
 

@@ -1,0 +1,41 @@
+// One tier of a row of the changes feed under the balance: the count, then
+// the coin, smaller than in the balance pill. Appended into a row by
+// CoinsHud for each non-zero tier of the change; the count is set through
+// "#Copper #Count.Text", with the sign on the first tier of the row. The
+// styles are the row's colour (gain or loss) at each step of its fade-out:
+// @Up in full, @Up1 to @Up9 fading by tenths; likewise @Down. Set through
+// "#Copper #Count.Style"; the icon fades through "#Copper #Icon.Background.Color".
+@Up = (FontSize: 16, TextColor: #8CFF8C, RenderBold: true, VerticalAlignment: Center);
+@Up1 = (...@Up, TextColor: #8CFF8C(0.9));
+@Up2 = (...@Up, TextColor: #8CFF8C(0.8));
+@Up3 = (...@Up, TextColor: #8CFF8C(0.7));
+@Up4 = (...@Up, TextColor: #8CFF8C(0.6));
+@Up5 = (...@Up, TextColor: #8CFF8C(0.5));
+@Up6 = (...@Up, TextColor: #8CFF8C(0.4));
+@Up7 = (...@Up, TextColor: #8CFF8C(0.3));
+@Up8 = (...@Up, TextColor: #8CFF8C(0.2));
+@Up9 = (...@Up, TextColor: #8CFF8C(0.1));
+@Down = (...@Up, TextColor: #FF7A7A);
+@Down1 = (...@Up, TextColor: #FF7A7A(0.9));
+@Down2 = (...@Up, TextColor: #FF7A7A(0.8));
+@Down3 = (...@Up, TextColor: #FF7A7A(0.7));
+@Down4 = (...@Up, TextColor: #FF7A7A(0.6));
+@Down5 = (...@Up, TextColor: #FF7A7A(0.5));
+@Down6 = (...@Up, TextColor: #FF7A7A(0.4));
+@Down7 = (...@Up, TextColor: #FF7A7A(0.3));
+@Down8 = (...@Up, TextColor: #FF7A7A(0.2));
+@Down9 = (...@Up, TextColor: #FF7A7A(0.1));
+
+Group #Copper {
+  LayoutMode: Left;
+
+  Label #Count {
+    Text: "0";
+    Style: @Up;
+  }
+
+  Group #Icon {
+    Background: (TexturePath: "../Copper.png");
+    Anchor: (Width: 18, Height: 18, Left: 2, Right: 6);
+  }
+}
