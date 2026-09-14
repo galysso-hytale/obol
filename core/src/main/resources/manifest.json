@@ -1,7 +1,7 @@
 {
     "Group": "Galysso",
     "Name": "obol",
-    "Version": "0.1.0",
+    "Version": "0.2.0",
     "Description": "Currency and wallets API.",
     "Authors": [
         {

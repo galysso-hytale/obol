@@ -6,9 +6,11 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.ObolApi;
-import dev.galysso.obol.api.PlayerWallet;
+import dev.galysso.obol.api.WalletId;
+import dev.galysso.obol.internal.ObolBackendImpl;
+import dev.galysso.obol.internal.WalletImpl;
 
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -25,19 +27,24 @@ import java.util.UUID;
  *
  * <p>Players are {@code PLAYER_UUID}s: the name of an online player, or a
  * raw UUID for someone offline — the store does not need them connected.</p>
+ *
+ * <p>The commands talk to the implementation, not to the {@code Obol}
+ * facade: {@code set} is an administrative write that no wallet operation
+ * of the public API offers.</p>
  */
 public final class ObolCommand extends CommandBase {
 
     static final String PERMISSION = "obol.admin";
 
-    public ObolCommand() {
+    public ObolCommand(ObolBackendImpl backend) {
         super("obol", "Obol administration.");
+        Objects.requireNonNull(backend, "backend");
         requirePermission(PERMISSION);
         setPermissionGroups("hytale:Admin");
-        addSubCommand(new Give());
-        addSubCommand(new Take());
-        addSubCommand(new Set());
-        addSubCommand(new Transfer());
+        addSubCommand(new Give(backend));
+        addSubCommand(new Take(backend));
+        addSubCommand(new Set(backend));
+        addSubCommand(new Transfer(backend));
     }
 
     @Override
@@ -50,11 +57,13 @@ public final class ObolCommand extends CommandBase {
      */
     private abstract static class Sub extends CommandBase {
 
+        final ObolBackendImpl backend;
         private final RequiredArg<UUID> player;
         private final RequiredArg<String> amount;
 
-        Sub(String name, String description) {
+        Sub(ObolBackendImpl backend, String name, String description) {
             super(name, description);
+            this.backend = backend;
             player = withRequiredArg("player", "Online player name, or a UUID.", ArgTypes.PLAYER_UUID);
             amount = withRequiredArg("amount", "Amount, e.g. 2g 50s.", ArgTypes.GREEDY_STRING);
             requirePermission(PERMISSION);
@@ -80,14 +89,14 @@ public final class ObolCommand extends CommandBase {
 
     private static final class Give extends Sub {
 
-        Give() {
-            super("give", "Adds coins to a player's balance.");
+        Give(ObolBackendImpl backend) {
+            super(backend, "give", "Adds coins to a player's balance.");
         }
 
         @Override
         String apply(UUID target, String amountText) {
             Coins amount = Commands.positiveAmount(amountText);
-            Coins after = new PlayerWallet(target).deposit(amount);
+            Coins after = backend.wallet(WalletId.player(target)).deposit(amount);
             return "Gave " + Commands.format(amount) + " to " + Commands.name(target)
                     + ". Balance: " + Commands.format(after);
         }
@@ -95,14 +104,14 @@ public final class ObolCommand extends CommandBase {
 
     private static final class Take extends Sub {
 
-        Take() {
-            super("take", "Removes coins from a player's balance.");
+        Take(ObolBackendImpl backend) {
+            super(backend, "take", "Removes coins from a player's balance.");
         }
 
         @Override
         String apply(UUID target, String amountText) {
             Coins amount = Commands.positiveAmount(amountText);
-            PlayerWallet wallet = new PlayerWallet(target);
+            WalletImpl wallet = backend.wallet(WalletId.player(target));
             if (!wallet.withdraw(amount)) {
                 throw Commands.error("Insufficient funds: " + Commands.name(target) + " has "
                         + Commands.format(wallet.balance()) + ".");
@@ -115,16 +124,16 @@ public final class ObolCommand extends CommandBase {
 
     private static final class Set extends Sub {
 
-        Set() {
-            super("set", "Sets a player's balance; zero is allowed.");
+        Set(ObolBackendImpl backend) {
+            super(backend, "set", "Sets a player's balance; zero is allowed.");
         }
 
         @Override
         String apply(UUID target, String amountText) {
             Coins amount = Commands.amount(amountText);
-            // The store takes the wallet lock and publishes the change, so a
-            // HUD tracking the player sees the new balance at once.
-            Coins previous = ObolApi.get().balances().set(new PlayerWallet(target).id(), amount);
+            // The wallet takes its lock and publishes the change, so a HUD
+            // tracking the player sees the new balance at once.
+            Coins previous = backend.wallet(WalletId.player(target)).set(amount);
             return "Set " + Commands.name(target) + "'s balance to " + Commands.format(amount)
                     + " (was " + Commands.format(previous) + ").";
         }
@@ -132,12 +141,14 @@ public final class ObolCommand extends CommandBase {
 
     private static final class Transfer extends CommandBase {
 
+        private final ObolBackendImpl backend;
         private final RequiredArg<UUID> from;
         private final RequiredArg<UUID> to;
         private final RequiredArg<String> amount;
 
-        Transfer() {
+        Transfer(ObolBackendImpl backend) {
             super("transfer", "Moves coins from one player to another.");
+            this.backend = backend;
             from = withRequiredArg("from", "Paying player: online name, or a UUID.", ArgTypes.PLAYER_UUID);
             to = withRequiredArg("to", "Receiving player: online name, or a UUID.", ArgTypes.PLAYER_UUID);
             amount = withRequiredArg("amount", "Amount, e.g. 2g 50s.", ArgTypes.GREEDY_STRING);
@@ -152,8 +163,8 @@ public final class ObolCommand extends CommandBase {
             if (source.equals(dest)) {
                 throw Commands.error("The two players must differ.");
             }
-            PlayerWallet payer = new PlayerWallet(source);
-            PlayerWallet payee = new PlayerWallet(dest);
+            WalletImpl payer = backend.wallet(WalletId.player(source));
+            WalletImpl payee = backend.wallet(WalletId.player(dest));
             if (!payer.transferTo(payee, coins)) {
                 throw Commands.error("Insufficient funds: " + Commands.name(source) + " has "
                         + Commands.format(payer.balance()) + ".");

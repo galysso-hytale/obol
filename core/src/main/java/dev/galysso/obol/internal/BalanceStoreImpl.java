@@ -1,6 +1,5 @@
 package dev.galysso.obol.internal;
 
-import dev.galysso.obol.api.BalanceStore;
 import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.WalletId;
 
@@ -12,25 +11,32 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * The {@link BalanceStore} Obol ships: a concurrent map of balances keyed by
- * {@link WalletId#storageKey()}, plus a dirty flag for the persistence layer.
+ * Obol's balance store: a concurrent map of balances keyed by
+ * {@link WalletId#toString()} ({@code kind:key}), plus a dirty flag for the
+ * persistence layer.
  *
- * <p>No rule lives here (see {@link BalanceStore}): {@code Wallet} enforces
- * them and calls {@link #set} under the wallet lock. Nothing in this class
- * does I/O; every call is a map operation.</p>
+ * <p>Deliberately a dumb {@code Map<WalletId, long>}: no rule lives here.
+ * Non-negativity, atomicity, transfers and events are {@link WalletImpl}'s,
+ * which calls {@link #set} under the wallet lock. Nothing in this class does
+ * I/O; every call is a map operation. A zero balance is kept, not
+ * removed.</p>
  */
-public final class BalanceStoreImpl implements BalanceStore {
+public final class BalanceStoreImpl {
 
     private final ConcurrentMap<String, Long> balances = new ConcurrentHashMap<>();
     private final AtomicBoolean dirty = new AtomicBoolean();
 
-    @Override
+    /** {@return the stored balance, or {@link Coins#ZERO} if the id is unknown} */
     public Coins balance(WalletId id) {
         Long copper = balances.get(key(id));
         return copper == null ? Coins.ZERO : Coins.ofCopper(copper);
     }
 
-    @Override
+    /**
+     * Stores a balance, creating the entry if needed.
+     *
+     * @return the previous balance, {@link Coins#ZERO} if the id was unknown
+     */
     public Coins set(WalletId id, Coins coins) {
         Objects.requireNonNull(coins, "coins");
         Long previous = balances.put(key(id), coins.copper());
@@ -38,12 +44,16 @@ public final class BalanceStoreImpl implements BalanceStore {
         return previous == null ? Coins.ZERO : Coins.ofCopper(previous);
     }
 
-    @Override
+    /** {@return whether the store holds an entry for this id, even at zero} */
     public boolean exists(WalletId id) {
         return balances.containsKey(key(id));
     }
 
-    @Override
+    /**
+     * Removes an entry.
+     *
+     * @return {@code true} if an entry was removed
+     */
     public boolean delete(WalletId id) {
         boolean removed = balances.remove(key(id)) != null;
         if (removed) {
@@ -57,7 +67,7 @@ public final class BalanceStoreImpl implements BalanceStore {
      * storage. Does not mark the store dirty: what was just loaded is by
      * definition what is on disk.
      *
-     * @param loaded balances keyed by {@link WalletId#storageKey()}
+     * @param loaded balances keyed by {@link WalletId#toString()}
      * @throws IllegalArgumentException if a value is negative, which cannot
      *                                  come from Obol and is treated as a
      *                                  corrupt file rather than silently
@@ -110,6 +120,6 @@ public final class BalanceStoreImpl implements BalanceStore {
     }
 
     private static String key(WalletId id) {
-        return Objects.requireNonNull(id, "id").storageKey();
+        return Objects.requireNonNull(id, "id").toString();
     }
 }

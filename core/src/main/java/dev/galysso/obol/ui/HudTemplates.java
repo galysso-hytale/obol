@@ -1,7 +1,6 @@
 package dev.galysso.obol.ui;
 
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.ScreenPosition;
 
@@ -12,8 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * The UI documents behind each on-screen {@link CoinsFormat}, and their
- * placement.
+ * The UI documents of an overlay, and their placement.
  *
  * <p>Two layers. The root is inline UI markup sent with the HUD, the way the
  * server's own spectating HUD does it: it places an empty pill in the
@@ -60,14 +58,14 @@ public final class HudTemplates {
     private static final String GAP = "%GAP%";
 
     /**
-     * {@link CoinsFormat#STANDARD}: a translucent pill lining up, from the
-     * largest tier down, each count followed by its coin, and under it (over
-     * it, in a bottom corner) the feed of recent changes. The outer group
-     * spans the screen edge, tall enough for the pill and a full feed, and
-     * stacks from the requested corner; each row packs its content against
-     * the corner's side and sizes itself to it.
+     * The root: a translucent pill lining up, from the largest tier down,
+     * each count followed by its coin, and under it (over it, in a bottom
+     * corner) the feed of recent changes. The outer group spans the screen
+     * edge, tall enough for the pill and a full feed, and stacks from the
+     * requested corner; each row packs its content against the corner's
+     * side and sizes itself to it.
      */
-    private static final String STANDARD = """
+    private static final String ROOT = """
             Group {
               LayoutMode: %STACK%;
               Anchor: (%ANCHOR%, Height: %HEIGHT%);
@@ -107,36 +105,16 @@ public final class HudTemplates {
             }
             """;
 
-    private static final Map<String, String> BY_FORMAT_ID = Map.of(
-            CoinsFormat.STANDARD.id(), STANDARD);
-
     private HudTemplates() {
     }
 
     /**
-     * {@return whether the format has an on-screen template}
+     * {@return the root document, placed at that position}
      */
-    public static boolean supports(CoinsFormat format) {
-        return BY_FORMAT_ID.containsKey(format.id());
-    }
-
-    /**
-     * {@return the root document for that format, placed at that position}
-     *
-     * @throws IllegalArgumentException if the format has no template; a
-     *                                  text-only format like
-     *                                  {@link CoinsFormat#LONG} is not an
-     *                                  on-screen one
-     */
-    public static String document(CoinsFormat format, ScreenPosition position) {
-        String template = BY_FORMAT_ID.get(format.id());
-        if (template == null) {
-            throw new IllegalArgumentException(
-                    "Format " + format + " has no on-screen template");
-        }
-        return template
-                .replace(LAYOUT, position.corner().isRight() ? "Right" : "Left")
-                .replace(STACK, position.corner().isBottom() ? "Bottom" : "Top")
+    public static String document(ScreenPosition position) {
+        return ROOT
+                .replace(LAYOUT, isRight(position.corner()) ? "Right" : "Left")
+                .replace(STACK, isBottom(position.corner()) ? "Bottom" : "Top")
                 .replace(HEIGHT, Integer.toString(PILL_HEIGHT + ChangeFeed.MAX_ROWS * (ROW_HEIGHT + ROW_GAP)))
                 .replace(ANCHOR, anchor(position));
     }
@@ -146,8 +124,8 @@ public final class HudTemplates {
      */
     public static String feedRow(ScreenPosition position) {
         return FEED_ROW
-                .replace(LAYOUT, position.corner().isRight() ? "Right" : "Left")
-                .replace(GAP, (position.corner().isBottom() ? "Bottom: " : "Top: ") + ROW_GAP);
+                .replace(LAYOUT, isRight(position.corner()) ? "Right" : "Left")
+                .replace(GAP, (isBottom(position.corner()) ? "Bottom: " : "Top: ") + ROW_GAP);
     }
 
     /** {@return the selector of the {@code index}th row of the feed, newest first} */
@@ -159,7 +137,7 @@ public final class HudTemplates {
      * {@return the tiers of a change, largest first}
      *
      * <p>An amount, not a position: zero tiers are left out, the way
-     * {@link CoinsFormat#STANDARD} writes it ({@code +2g 50s}).</p>
+     * {@link Coins#toString()} writes it ({@code +2g 50s}).</p>
      */
     public static List<Tier> feedTiers(Coins amount) {
         List<Tier> tiers = new ArrayList<>();
@@ -216,8 +194,16 @@ public final class HudTemplates {
      */
     static String anchor(ScreenPosition position) {
         ScreenPosition.Corner corner = position.corner();
-        return (corner.isBottom() ? "Bottom: " : "Top: ") + position.offsetY()
-                + ", " + (corner.isRight() ? "Right: " : "Left: ") + position.offsetX();
+        return (isBottom(corner) ? "Bottom: " : "Top: ") + position.offsetY()
+                + ", " + (isRight(corner) ? "Right: " : "Left: ") + position.offsetX();
+    }
+
+    private static boolean isRight(ScreenPosition.Corner corner) {
+        return corner == ScreenPosition.Corner.TOP_RIGHT || corner == ScreenPosition.Corner.BOTTOM_RIGHT;
+    }
+
+    private static boolean isBottom(ScreenPosition.Corner corner) {
+        return corner == ScreenPosition.Corner.BOTTOM_LEFT || corner == ScreenPosition.Corner.BOTTOM_RIGHT;
     }
 
     /**

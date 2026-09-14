@@ -1,7 +1,6 @@
 package dev.galysso.obol.ui;
 
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.ScreenPosition;
 import dev.galysso.obol.api.event.CoinsChangedEvent;
 
@@ -16,7 +15,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 /**
  * An {@link OverlayHuds} with no screen: every call on every overlay is
  * written down as {@code "<key> <call>"}, in order, across all overlays.
- * Amounts are written in the overlay's format, for readable expectations.
+ * Amounts are written as {@code Coins.toString()}, for readable expectations.
  */
 final class RecordingHuds implements OverlayHuds {
 
@@ -26,7 +25,7 @@ final class RecordingHuds implements OverlayHuds {
     final List<String> keys = new ArrayList<>();
 
     @Override
-    public Optional<OverlayHud> open(UUID viewer, String key, CoinsFormat format) {
+    public Optional<OverlayHud> open(UUID viewer, String key) {
         if (!online.contains(viewer)) {
             return Optional.empty();
         }
@@ -34,12 +33,12 @@ final class RecordingHuds implements OverlayHuds {
         return Optional.of(new OverlayHud() {
             @Override
             public void show(ScreenPosition position, Coins coins) {
-                calls.add(key + " show " + HudTemplates.anchor(position) + " \"" + format.format(coins) + "\"");
+                calls.add(key + " show " + HudTemplates.anchor(position) + " \"" + coins + "\"");
             }
 
             @Override
             public void setCoins(Coins coins) {
-                calls.add(key + " text \"" + format.format(coins) + "\"");
+                calls.add(key + " text \"" + coins + "\"");
             }
 
             @Override
@@ -47,12 +46,7 @@ final class RecordingHuds implements OverlayHuds {
                 Coins amount = change.increased()
                         ? change.after().minus(change.before()).orElseThrow()
                         : change.before().minus(change.after()).orElseThrow();
-                calls.add(key + " log " + (change.increased() ? "+" : "-") + format.format(amount));
-            }
-
-            @Override
-            public void move(ScreenPosition position) {
-                calls.add(key + " move " + HudTemplates.anchor(position));
+                calls.add(key + " log " + (change.increased() ? "+" : "-") + amount);
             }
 
             @Override

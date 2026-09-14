@@ -1,8 +1,6 @@
 package dev.galysso.obol.ui;
 
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsDisplay;
-import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.CoinsOverlay;
 import dev.galysso.obol.api.ScreenPosition;
 import dev.galysso.obol.api.Wallet;
@@ -16,13 +14,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * The single {@link CoinsDisplay}: a registry of overlays per viewer over an
- * {@link OverlayHuds} that does the actual drawing.
+ * What {@code Obol.show} and {@code Obol.track} do: a registry of overlays
+ * per viewer over an {@link OverlayHuds} that does the actual drawing.
  *
  * <p>Plain JDK code: the server is behind {@link OverlayHuds}, so this class
  * is unit-tested with a fake one.</p>
  */
-public final class CoinsDisplayImpl implements CoinsDisplay {
+public final class CoinsDisplayImpl {
 
     private final OverlayHuds huds;
     private final Listeners listeners;
@@ -34,18 +32,18 @@ public final class CoinsDisplayImpl implements CoinsDisplay {
         this.listeners = Objects.requireNonNull(listeners, "listeners");
     }
 
-    @Override
-    public CoinsOverlay show(UUID viewer, ScreenPosition position, Coins coins, CoinsFormat format) {
+    /** See {@code Obol.show}: a fixed amount, changed through the handle. */
+    public CoinsOverlay show(UUID viewer, ScreenPosition position, Coins coins) {
         Objects.requireNonNull(coins, "coins");
-        Overlay overlay = open(viewer, position, null, format);
+        Overlay overlay = open(viewer, position, null);
         overlay.show(coins);
         return overlay;
     }
 
-    @Override
-    public CoinsOverlay track(UUID viewer, ScreenPosition position, Wallet wallet, CoinsFormat format) {
+    /** See {@code Obol.track}: the wallet's balance, refreshed on every change. */
+    public CoinsOverlay track(UUID viewer, ScreenPosition position, Wallet wallet) {
         Objects.requireNonNull(wallet, "wallet");
-        Overlay overlay = open(viewer, position, wallet, format);
+        Overlay overlay = open(viewer, position, wallet);
         // Subscribed before the first read: a change between the read and
         // the subscription is then refreshed rather than lost.
         listeners.add(overlay.subscribe());
@@ -58,14 +56,10 @@ public final class CoinsDisplayImpl implements CoinsDisplay {
         return overlay;
     }
 
-    private Overlay open(UUID viewer, ScreenPosition position, Wallet tracked, CoinsFormat format) {
+    private Overlay open(UUID viewer, ScreenPosition position, Wallet tracked) {
         Objects.requireNonNull(viewer, "viewer");
         Objects.requireNonNull(position, "position");
-        Objects.requireNonNull(format, "format");
-        if (!HudTemplates.supports(format)) {
-            throw new IllegalArgumentException("Format " + format + " has no on-screen template");
-        }
-        OverlayHud hud = huds.open(viewer, "obol:" + nextKey.incrementAndGet(), format)
+        OverlayHud hud = huds.open(viewer, "obol:" + nextKey.incrementAndGet())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Player " + viewer + " is not connected"));
         Overlay overlay = new Overlay(viewer, hud, position, tracked, this::forget);

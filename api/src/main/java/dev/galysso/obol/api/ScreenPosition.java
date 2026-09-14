@@ -21,17 +21,7 @@ public record ScreenPosition(Corner corner, int offsetX, int offsetY) {
 
     /** The four corners of the screen. */
     public enum Corner {
-        TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT;
-
-        /** {@return whether this corner is on the right edge} */
-        public boolean isRight() {
-            return this == TOP_RIGHT || this == BOTTOM_RIGHT;
-        }
-
-        /** {@return whether this corner is on the bottom edge} */
-        public boolean isBottom() {
-            return this == BOTTOM_LEFT || this == BOTTOM_RIGHT;
-        }
+        TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT
     }
 
     /**

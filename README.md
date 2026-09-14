@@ -46,32 +46,39 @@ depending on it, rather than starting an empty economy.
 
 ## Modders
 
+Setup and reference below. [MODDING.md](MODDING.md) is the guide: the model
+behind the API and the patterns that fit it.
+
 ### Setup
 
 ```kotlin
 dependencies {
-    compileOnly("dev.galysso.obol:obol-api:0.1.0")   // JDK-only, no server types
+    compileOnly("dev.galysso.obol:obol-api:0.2.0")   // JDK-only, no server types
 }
 ```
 
 ```json
-"Dependencies": { "Galysso:obol": ">=0.1.0" }
+"Dependencies": { "Galysso:obol": ">=0.2.0" }
 ```
 
 `obol-api` is not on a public repository yet: run
 `./gradlew :api:publishToMavenLocal` from this repository and add
 `mavenLocal()` to your repositories. Never bundle it: at runtime the classes
-come from Obol's own jar. For an optional integration, put Obol under
-`OptionalDependencies` and use `ObolApi.find()` instead of `ObolApi.get()`.
+come from Obol's own jar.
+
+For an optional integration, put Obol under `OptionalDependencies` and check
+`PluginManager.get().hasPlugin(...)` from a class that names no Obol type
+before touching one: when Obol is absent its classes are absent too, so any
+class that mentions `Obol` fails to load.
 
 ### Charging a player
 
 ```java
 import dev.galysso.obol.api.*;
 
-Wallet buyer = new PlayerWallet(player.getUuid());   // a stateless handle: create it anywhere
+Wallet buyer = Obol.playerWallet(player.getUuid());   // nothing to fetch or keep: call it where needed
 Coins price = Coins.of(Denomination.GOLD, 2);
-if (!buyer.withdraw(price)) {                        // atomic: false means nothing moved
+if (!buyer.withdraw(price)) {                         // atomic: false means nothing moved
     player.sendMessage(Message.raw("Not enough coins: " + buyer.balance() + " / " + price));
     return;
 }
@@ -81,42 +88,25 @@ giveItem(player);
 ### Giving anything a wallet
 
 ```java
-// Balance stored by Obol, under "guild:<id>" in balances.json.
-final class GuildWallet extends StoredWallet {
-    private final String guildId;
-    GuildWallet(String guildId) { this.guildId = guildId; }
-    @Override public WalletId id() { return new WalletId("guild", guildId); }
-}
-
-// Balance stored by you (a persistent ECS component, your own file…).
-final class MerchantWallet extends Wallet {
-    private final MerchantComponent c;               // holds a `long copper`
-    MerchantWallet(MerchantComponent c) { this.c = c; }
-    @Override public WalletId id()              { return new WalletId("merchant", c.merchantId()); }
-    @Override protected long loadCopper()       { return c.copper(); }
-    @Override protected void saveCopper(long v) { c.setCopper(v); }
-}
+Wallet guild = Obol.wallet(new WalletId("guild", guildId));   // stored under "guild:<id>"
+buyer.transferTo(guild, fee);
+guild.clear();                                                // when the guild is disbanded
 ```
 
-Both get the same rules, transfers, events and displays as a player. The two
-hooks run under the wallet lock, on the thread that moves the money. A
-`StoredWallet` entry is never removed on its own: call
-`ObolApi.get().balances().delete(id)` when its owner is gone for good.
+A wallet is a stateless handle on an entry of Obol's store: an id nobody has
+written to holds zero, and an entry is never removed on its own. `kind` is
+your mod's namespace. Every wallet gets the same rules, transfers, events and
+displays as a player's.
 
 ### Showing coins
 
 ```java
-CoinsDisplay display = ObolApi.get().display();
-
 // Follows the wallet until hide() or disconnect, whoever moves the money.
-CoinsOverlay hud = display.track(viewer, ScreenPosition.topRight(20, 20),
-                                 new PlayerWallet(viewer), CoinsFormat.STANDARD);
+CoinsOverlay hud = Obol.track(viewer, ScreenPosition.topRight(20, 20), Obol.playerWallet(viewer));
 
 // A fixed amount (a price), changed by hand.
-CoinsOverlay tag = display.show(viewer, ScreenPosition.bottomLeft(20, 80),
-                                price, CoinsFormat.STANDARD);
+CoinsOverlay tag = Obol.show(viewer, ScreenPosition.bottomLeft(20, 80), price);
 tag.update(Coins.of(Denomination.GOLD, 3));
-tag.move(ScreenPosition.bottomRight(20, 80));
 tag.hide();
 ```
 
@@ -145,7 +135,7 @@ item icons: a mod giving coins a physical form needs its own item assets.
 ### Listening
 
 ```java
-ObolApi.get().addListener(e -> log(e.wallet() + ": " + e.before() + " -> " + e.after()));
+Obol.addListener(e -> log(e.wallet() + ": " + e.before() + " -> " + e.after()));
 ```
 
 ### API reference
@@ -153,78 +143,60 @@ ObolApi.get().addListener(e -> log(e.wallet() + ": " + e.before() + " -> " + e.a
 Package `dev.galysso.obol.api`. No method accepts `null`
 (`NullPointerException`). `dev.galysso.obol.api.internal` is not API.
 
-**`ObolApi`** — `static get()` (`IllegalStateException` if Obol is not
-loaded: missing or misordered manifest dependency), `static find()` →
-`Optional`. `balances()`, `display()`, `addListener(l)` (twice = called
-twice), `removeListener(l)` → `boolean`.
+**`Obol`** — static entry point, `IllegalStateException` on every method if
+Obol is not loaded (missing or misordered manifest dependency).
+`wallet(WalletId)`, `playerWallet(UUID)` (= `wallet(WalletId.player(uuid))`),
+`show(viewer, position, coins)` and `track(viewer, position, wallet)` →
+`CoinsOverlay`, `addListener(l)` (twice = called twice), `removeListener(l)`
+→ `boolean`.
+
+**`Wallet`** — a stateless handle, equal to any other with the same `id()`.
+`balance()`, `canAfford(c)` (read-only hint; trust `withdraw` instead),
+`deposit(c)` → new balance, `withdraw(c)` → `boolean`, `transferTo(wallet, c)`
+→ `boolean`, `clear()` (balance to zero, entry removed, idempotent).
+`withdraw` and `transferTo` return `false` and write nothing when the funds
+are short — **never ignore the result**. A transfer moves both balances or
+neither; to itself it writes nothing. Overflow → `ArithmeticException`,
+nothing written.
+
+**`WalletId`** — record `(kind, key)`, both `[a-z0-9_-]+`
+(`IllegalArgumentException`); `kind` is your mod's namespace. `PLAYER_KIND =
+"player"`, `static player(UUID)`, `toString()` = `kind:key`.
 
 **`Coins`** — immutable record over a non-negative `long copper()`,
-`Comparable`. `ZERO`, `ofCopper(long)`, `of(Denomination, long)`,
-`of(mythril, gold, silver, copper)`; `plus(c)`, `times(long)`
+`Comparable`. `ZERO`, `ofCopper(long)`, `of(Denomination, long)`, `static
+parse(text)` (`2g 35s 4c`, `2g35s`, `250s` = 2g 50s, `2 gold`, bare copper;
+case-insensitive, tiers in any order, each at most once; throws the checked
+`CoinsParseException`, `input()`); `plus(c)`, `times(long)`
 (`ArithmeticException` on overflow), `minus(c)` → `Optional`, empty below
-zero; `isZero()`, `covers(c)`, `breakdown()` → `EnumMap<Denomination, Long>`,
-`amountOf(tier)`. `toString()` is `CoinsFormat.STANDARD`.
+zero; `covers(c)`, `breakdown()` → `EnumMap<Denomination, Long>`.
+`toString()` is `2g 35s 4c`, zero tiers omitted, `0c` for zero, and parses
+back.
 
 **`Denomination`** — `COPPER, SILVER, GOLD, MYTHRIL`, declared in ascending
 value. `valueInCopper()`, `symbol()` (`c s g m`), `color()` (`#RRGGBB`, the
 on-screen palette), `texture()` (`Obol/<Tier>.png` under `Common/UI/Custom/`,
-48×48), `static largest()`.
+48×48).
 
-**`CoinsFormat`** — `STANDARD` (`2g 35s 4c`, zero tiers omitted, `0c` for
-zero), `LONG` (`2 gold, 35 silver, 4 copper`); `id()`, `format(coins)`.
-`static parse(text)` reads every format's output plus `2g35s`, `250s`
-(= 2g 50s) and bare copper; case-insensitive, tiers in any order, each at most
-once; throws the checked `CoinsParseException` (`input()`).
-
-**`Wallet`** (abstract) — `id()`, `protected loadCopper()`,
-`protected saveCopper(long)`. Final: `balance()`, `canAfford(c)` (read-only
-hint; trust `withdraw` instead), `deposit(c)` → new balance, `withdraw(c)` →
-`boolean`, `transferTo(wallet, c)` → `boolean`. `withdraw` and `transferTo`
-return `false` and write nothing when the funds are short — **never ignore
-the result**. A transfer moves both balances or neither, including when the
-receiving `saveCopper` throws; to itself it writes nothing. Storage holding a
-negative value → `IllegalStateException`; overflow → `ArithmeticException`,
-nothing written. `equals`/`hashCode` are on `id()`.
-
-**`StoredWallet`** (abstract) — a `Wallet` whose balance Obol stores and
-persists; only `id()` is left to write. **`PlayerWallet`** — `new
-PlayerWallet(UUID)`, `playerId()`, id `player:<uuid>`, `KIND = "player"`.
-
-**`WalletId`** — record `(kind, key)`, both `[a-z0-9_-]+`
-(`IllegalArgumentException`); `kind` is your mod's namespace. `storageKey()` =
-`kind:key`, `static parse(storageKey)`.
-
-**`BalanceStore`** (`ObolApi.balances()`) — Obol's own storage, for
-administration and migrations; day-to-day code goes through a `Wallet`.
-`balance(id)` (`ZERO` if unknown), `set(id, coins)` → previous balance (zero
-kept, not removed), `exists(id)`, `delete(id)` → `boolean`. `set` and
-`delete` take the wallet lock and publish an event when the balance changes.
-Calls are thread-safe individually; read-modify-write is not atomic here.
-
-**`CoinsDisplay`** (`ObolApi.display()`) — `show(viewer, position, coins,
-format)` and `track(viewer, position, wallet, format)` → `CoinsOverlay`. The
-viewer (`UUID`) must be connected and in a world, and the format must have an
-on-screen template — only `STANDARD` in this version — or
+**`CoinsOverlay`** — `update(coins)` (ignored on a tracking overlay), `hide()`
+(idempotent, releases a tracking listener). The viewer (`UUID`) must be
+connected and in a world or `Obol.show`/`track` throw
 `IllegalArgumentException`. Any number of overlays per player. `track`
 re-reads the wallet on every change, so it never shows a stale value, and
-lists the recent changes under the balance.
-
-**`CoinsOverlay`** — `update(coins)` (ignored on a tracking overlay),
-`move(position)`, `hide()` (idempotent, releases a tracking listener),
-`isVisible()`. Bound to the viewer's session: gone on disconnect, not
-recreated on reconnect (put it back on the server's `PlayerReadyEvent`), after
-which the handle is dead and `isVisible()` stays `false`. Every method may be
+lists the recent changes under the balance. Bound to the viewer's session:
+gone on disconnect, not recreated on reconnect (put it back on the server's
+`PlayerReadyEvent`), after which the handle is dead. Every method may be
 called from any thread; changes reach the client in call order.
 
 **`ScreenPosition`** — record `(Corner, offsetX, offsetY)` in UI pixels, never
 negative; `topLeft`, `topRight`, `bottomLeft`, `bottomRight(x, y)`. `Corner`:
-`isRight()`, `isBottom()`.
+`TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT`.
 
 **`CoinsListener`** — `onCoinsChanged(CoinsChangedEvent)`.
 **`event.CoinsChangedEvent`** — record `(wallet: WalletId, before, after)`,
 `increased()`; `before` and `after` always differ. Published for every
-accepted write on every kind of wallet (a transfer gives two: debit, then
-credit), synchronously on the thread that moved the money, after the lock was
+accepted write on every wallet (a transfer gives two: debit, then credit),
+synchronously on the thread that moved the money, after the lock was
 released, in subscription order. A listener that throws is logged and skipped;
 the others still run and the caller never sees it. The event is a snapshot:
 read `wallet.balance()` when the current value matters.

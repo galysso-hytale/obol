@@ -6,7 +6,7 @@ import dev.galysso.obol.api.event.CoinsChangedEvent;
 
 /**
  * One overlay as the server sees it: a document on a player's screen whose
- * amount and placement can change.
+ * amount can change.
  *
  * <p>The seam between {@link CoinsDisplayImpl}, which is plain JDK code and
  * unit-tested, and {@link CoinsHud}, which talks to the server. Calls may
@@ -25,9 +25,6 @@ public interface OverlayHud {
      * changes. Only a tracking overlay calls it, after {@link #setCoins}.
      */
     void log(CoinsChangedEvent change);
-
-    /** Moves the document. */
-    void move(ScreenPosition position);
 
     /** Takes the document off the screen. Nothing is called afterwards. */
     void hide();

@@ -3,7 +3,6 @@ package dev.galysso.obol.ui;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
-import dev.galysso.obol.api.CoinsFormat;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -29,11 +28,11 @@ public final class ServerHuds implements OverlayHuds {
     }
 
     @Override
-    public Optional<OverlayHud> open(UUID viewer, String key, CoinsFormat format) {
+    public Optional<OverlayHud> open(UUID viewer, String key) {
         PlayerRef player = Universe.get().getPlayer(viewer);
         if (player == null || player.getReference() == null) {
             return Optional.empty();
         }
-        return Optional.of(new CoinsHud(player, key, format, logger, scheduler));
+        return Optional.of(new CoinsHud(player, key, logger, scheduler));
     }
 }

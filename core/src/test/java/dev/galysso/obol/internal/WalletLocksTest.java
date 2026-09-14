@@ -17,7 +17,7 @@ class WalletLocksTest {
     @Test
     void sameIdSharesOneLockAcrossCalls() {
         WalletId a = new WalletId("player", "a");
-        WalletId again = WalletId.parse("player:a");
+        WalletId again = new WalletId("player", "a");
         assertSame(locks.lockFor(a), locks.lockFor(again));
     }
 

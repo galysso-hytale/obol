@@ -23,7 +23,7 @@ final class Overlay implements CoinsOverlay {
     private final OverlayHud hud;
     private final Wallet tracked;
     private final Consumer<Overlay> onHidden;
-    private ScreenPosition position;
+    private final ScreenPosition position;
     private boolean visible;
     /** The subscription of a tracking overlay, until hidden. */
     private volatile CoinsListener listener;
@@ -101,15 +101,6 @@ final class Overlay implements CoinsOverlay {
     }
 
     @Override
-    public synchronized void move(ScreenPosition position) {
-        Objects.requireNonNull(position, "position");
-        this.position = position;
-        if (visible) {
-            hud.move(position);
-        }
-    }
-
-    @Override
     public void hide() {
         if (leaveScreen()) {
             hud.hide();
@@ -134,8 +125,8 @@ final class Overlay implements CoinsOverlay {
         return true;
     }
 
-    @Override
-    public synchronized boolean isVisible() {
+    /** Whether the overlay is on the screen: {@code false} once hidden or dropped. */
+    synchronized boolean isVisible() {
         return visible;
     }
 }

@@ -22,7 +22,7 @@ repositories {
     mavenCentral()
 }
 
-// The reason this module exists without Hytale: value types and wallet rules
+// The reason this module exists without Hytale: value types and the facade
 // are unit-tested here, with no server in the loop.
 testing {
     suites {

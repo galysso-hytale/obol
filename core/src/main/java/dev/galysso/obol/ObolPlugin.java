@@ -9,12 +9,12 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
-import dev.galysso.obol.api.internal.ObolApiHolder;
+import dev.galysso.obol.api.internal.ObolBackendHolder;
 import dev.galysso.obol.command.ObolCommand;
 import dev.galysso.obol.internal.BalancesPersistence;
 import dev.galysso.obol.internal.BalancesState;
 import dev.galysso.obol.internal.ConfigBalancesBackend;
-import dev.galysso.obol.internal.ObolApiImpl;
+import dev.galysso.obol.internal.ObolBackendImpl;
 import dev.galysso.obol.ui.PlayerHuds;
 import dev.galysso.obol.ui.ServerHuds;
 
@@ -30,7 +30,7 @@ public class ObolPlugin extends JavaPlugin {
 
     private static final long SAVE_PERIOD_SECONDS = 30;
 
-    private final ObolApiImpl api;
+    private final ObolBackendImpl backend;
     private final Config<BalancesState> balancesFile;
     private final BalancesPersistence persistence;
     private final PlayerHuds playerHuds;
@@ -39,18 +39,18 @@ public class ObolPlugin extends JavaPlugin {
 
     public ObolPlugin(@Nonnull JavaPluginInit init) {
         super(init);
-        api = new ObolApiImpl(
+        backend = new ObolBackendImpl(
                 (listener, event, e) -> getLogger().atSevere().withCause(e)
                         .log("Listener %s failed on %s", listener.getClass().getName(), event),
                 new ServerHuds(getLogger(), HytaleServer.SCHEDULED_EXECUTOR));
         // withConfig() is only allowed before setup(): the server refuses it
         // once the plugin state has moved on.
         balancesFile = withConfig("balances", BalancesState.CODEC);
-        persistence = new BalancesPersistence(api.storedBalances(), new ConfigBalancesBackend(balancesFile));
-        playerHuds = new PlayerHuds(api.display());
+        persistence = new BalancesPersistence(backend.storedBalances(), new ConfigBalancesBackend(balancesFile));
+        playerHuds = new PlayerHuds(backend);
         // Published from the constructor, not setup(): dependent plugins may
-        // already be resolving the API by the time our own setup() runs.
-        ObolApiHolder.install(api);
+        // already be calling the API by the time our own setup() runs.
+        ObolBackendHolder.install(backend);
     }
 
     @Override
@@ -62,14 +62,14 @@ public class ObolPlugin extends JavaPlugin {
             // An economy that silently restarts from zero is worse than a
             // plugin that refuses to start: unpublish the API so dependents
             // fail loudly too, and let the server log the cause.
-            ObolApiHolder.uninstall();
+            ObolBackendHolder.uninstall();
             throw new IllegalStateException(
                     "Cannot read balances.json; refusing to start with an empty economy", e);
         }
         this.loaded = true;
         getLogger().atInfo().log("Loaded %d balance(s)", count);
 
-        getCommandRegistry().registerCommand(new ObolCommand());
+        getCommandRegistry().registerCommand(new ObolCommand(backend));
 
         // Keyed event (String): the global registration sees every player.
         // Fired on the world thread, so the component lookup is legal here.
@@ -84,7 +84,7 @@ public class ObolPlugin extends JavaPlugin {
         // before an eventual crash between two ticks.
         getEventRegistry().register(PlayerDisconnectEvent.class, event -> {
             UUID player = event.getPlayerRef().getUuid();
-            api.display().onDisconnect(player);
+            backend.display().onDisconnect(player);
             playerHuds.onDisconnect(player);
             saveIfDirty("player disconnect");
         });
@@ -108,7 +108,7 @@ public class ObolPlugin extends JavaPlugin {
                 getLogger().atSevere().withCause(e).log("Failed to save balances.json on shutdown");
             }
         }
-        ObolApiHolder.uninstall();
+        ObolBackendHolder.uninstall();
     }
 
     /** Never throws: an event handler that throws breaks the other handlers. */

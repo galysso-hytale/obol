@@ -15,7 +15,7 @@ public interface BalancesBackend {
     /**
      * Reads from durable storage.
      *
-     * @return balances keyed by {@code WalletId.storageKey()}; empty if
+     * @return balances keyed by {@code WalletId.toString()}; empty if
      *         nothing was ever saved
      * @throws RuntimeException if the storage exists but cannot be read
      */

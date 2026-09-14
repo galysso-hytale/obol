@@ -7,7 +7,7 @@ import java.util.Locale;
  *
  * <p>The exchange rate between two consecutive tiers is fixed at ×100 and is
  * encoded only here, through {@link #valueInCopper()}. Everything else
- * ({@link Coins#breakdown()}, {@link CoinsFormat}) derives from it.</p>
+ * ({@link Coins#breakdown()}, {@link Coins#toString()}) derives from it.</p>
  *
  * <p>Declaration order is ascending, so {@link #ordinal()} and
  * {@link #compareTo(Enum)} order tiers by value.</p>
@@ -42,10 +42,10 @@ public enum Denomination {
     }
 
     /**
-     * {@return the short symbol used by {@link CoinsFormat#STANDARD} in text}
+     * {@return the short symbol used by {@link Coins#toString()} in text}
      *
      * <p>The English initial ({@code c}, {@code s}, {@code g}, {@code m}).
-     * On screen, {@code CoinsDisplay} draws the coin itself instead.</p>
+     * On screen, Obol draws the coin itself instead.</p>
      */
     public String symbol() {
         return symbol;
@@ -76,13 +76,5 @@ public enum Denomination {
      */
     public String texture() {
         return texture;
-    }
-
-    /**
-     * {@return the tier with the highest value}
-     */
-    public static Denomination largest() {
-        Denomination[] all = values();
-        return all[all.length - 1];
     }
 }

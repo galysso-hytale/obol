@@ -17,10 +17,12 @@ class DenominationTest {
     }
 
     @Test
-    void largestIsMythril() {
-        assertEquals(Denomination.MYTHRIL, Denomination.largest());
-        for (Denomination tier : Denomination.values()) {
-            assertTrue(tier.valueInCopper() <= Denomination.largest().valueInCopper());
+    void declaredInAscendingValue() {
+        Denomination[] tiers = Denomination.values();
+        assertEquals(Denomination.COPPER, tiers[0]);
+        assertEquals(Denomination.MYTHRIL, tiers[tiers.length - 1]);
+        for (int i = 1; i < tiers.length; i++) {
+            assertTrue(tiers[i - 1].valueInCopper() < tiers[i].valueInCopper());
         }
     }
 

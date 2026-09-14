@@ -1,15 +1,11 @@
 package dev.galysso.obol.ui;
 
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.CoinsOverlay;
-import dev.galysso.obol.api.PlayerWallet;
 import dev.galysso.obol.api.ScreenPosition;
-import dev.galysso.obol.api.Wallet;
 import dev.galysso.obol.api.WalletId;
-import dev.galysso.obol.api.internal.ObolApiHolder;
-import dev.galysso.obol.internal.ObolApiImpl;
-import org.junit.jupiter.api.AfterEach;
+import dev.galysso.obol.internal.ObolBackendImpl;
+import dev.galysso.obol.internal.WalletImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,49 +18,44 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The display over the real runtime (locks, store, listeners) and a fake
+ * The display over the real backend (locks, store, listeners) and a fake
  * screen, so that what a tracking overlay sends is checked against real
  * wallet operations.
  */
 class CoinsDisplayImplTest {
 
     private final RecordingHuds huds = new RecordingHuds();
-    private final ObolApiImpl api = new ObolApiImpl(
+    private final ObolBackendImpl backend = new ObolBackendImpl(
             (listener, event, e) -> {
                 throw new AssertionError("listener failed on " + event, e);
             },
             huds);
-    private final CoinsDisplayImpl display = api.display();
+    private final CoinsDisplayImpl display = backend.display();
     private final UUID viewer = UUID.randomUUID();
     private final ScreenPosition corner = ScreenPosition.topRight(20, 10);
 
     @BeforeEach
-    void install() {
-        ObolApiHolder.install(api);
+    void connect() {
         huds.online.add(viewer);
     }
 
-    @AfterEach
-    void uninstall() {
-        ObolApiHolder.uninstall();
+    private static boolean visible(CoinsOverlay overlay) {
+        return ((Overlay) overlay).isVisible();
     }
 
     @Test
     void aFixedOverlayShowsWhatItIsGiven() {
-        CoinsOverlay overlay = display.show(viewer, corner, Coins.ofCopper(250), CoinsFormat.STANDARD);
-        assertTrue(overlay.isVisible());
+        CoinsOverlay overlay = display.show(viewer, corner, Coins.ofCopper(250));
+        assertTrue(visible(overlay));
         overlay.update(Coins.ofCopper(10203));
-        overlay.move(ScreenPosition.bottomLeft(1, 2));
         overlay.hide();
         overlay.hide();
         overlay.update(Coins.ZERO);
-        overlay.move(corner);
 
-        assertFalse(overlay.isVisible());
+        assertFalse(visible(overlay));
         assertEquals(List.of(
                 "obol:1 show Top: 10, Right: 20 \"2s 50c\"",
                 "obol:1 text \"1g 2s 3c\"",
-                "obol:1 move Bottom: 2, Left: 1",
                 "obol:1 hide"),
                 huds.calls);
         assertEquals(0, display.count(viewer));
@@ -72,16 +63,16 @@ class CoinsDisplayImplTest {
 
     @Test
     void aTrackingOverlayFollowsEveryWriteThroughObol() {
-        PlayerWallet wallet = new PlayerWallet(viewer);
+        WalletImpl wallet = backend.wallet(WalletId.player(viewer));
         wallet.deposit(Coins.ofCopper(100));
-        CoinsOverlay overlay = display.track(viewer, corner, wallet, CoinsFormat.STANDARD);
+        CoinsOverlay overlay = display.track(viewer, corner, wallet);
 
         wallet.deposit(Coins.ofCopper(50));
         assertTrue(wallet.withdraw(Coins.ofCopper(1)));
         assertFalse(wallet.withdraw(Coins.ofCopper(10_000)));
         wallet.deposit(Coins.ZERO);
-        new PlayerWallet(UUID.randomUUID()).deposit(Coins.ofCopper(7));
-        api.balances().set(wallet.id(), Coins.ofCopper(9));
+        backend.wallet(WalletId.player(UUID.randomUUID())).deposit(Coins.ofCopper(7));
+        wallet.set(Coins.ofCopper(9));
         overlay.update(Coins.ofCopper(123_456));
         overlay.hide();
         wallet.deposit(Coins.ofCopper(1));
@@ -102,28 +93,14 @@ class CoinsDisplayImplTest {
     void aTrackingOverlayReadsTheWalletRatherThanTrustingTheEvent() {
         // A wallet whose listener sees a newer state than the event reports:
         // a second write done by a listener that runs before the display's.
-        PlayerWallet wallet = new PlayerWallet(viewer);
-        WalletId tax = new WalletId("test", "tax");
-        api.addListener(event -> {
+        WalletImpl wallet = backend.wallet(WalletId.player(viewer));
+        WalletImpl tax = backend.wallet(new WalletId("test", "tax"));
+        backend.addListener(event -> {
             if (event.wallet().equals(wallet.id()) && event.increased()) {
-                wallet.transferTo(new Wallet() {
-                    @Override
-                    public WalletId id() {
-                        return tax;
-                    }
-
-                    @Override
-                    protected long loadCopper() {
-                        return 0;
-                    }
-
-                    @Override
-                    protected void saveCopper(long copper) {
-                    }
-                }, Coins.ofCopper(1));
+                wallet.transferTo(tax, Coins.ofCopper(1));
             }
         });
-        display.track(viewer, corner, wallet, CoinsFormat.STANDARD);
+        display.track(viewer, corner, wallet);
 
         wallet.deposit(Coins.ofCopper(10));
 
@@ -141,67 +118,40 @@ class CoinsDisplayImplTest {
 
     @Test
     void severalOverlaysPerViewerEachWithTheirOwnKey() {
-        display.show(viewer, corner, Coins.ZERO, CoinsFormat.STANDARD);
-        display.track(viewer, corner, new PlayerWallet(viewer), CoinsFormat.STANDARD);
+        display.show(viewer, corner, Coins.ZERO);
+        display.track(viewer, corner, backend.wallet(WalletId.player(viewer)));
         assertEquals(List.of("obol:1", "obol:2"), huds.keys);
         assertEquals(2, display.count(viewer));
     }
 
     @Test
     void disconnectingDropsEveryOverlayWithoutTouchingTheScreen() {
-        PlayerWallet wallet = new PlayerWallet(viewer);
-        CoinsOverlay fixed = display.show(viewer, corner, Coins.ZERO, CoinsFormat.STANDARD);
-        CoinsOverlay tracking = display.track(viewer, corner, wallet, CoinsFormat.STANDARD);
+        WalletImpl wallet = backend.wallet(WalletId.player(viewer));
+        CoinsOverlay fixed = display.show(viewer, corner, Coins.ZERO);
+        CoinsOverlay tracking = display.track(viewer, corner, wallet);
 
         display.onDisconnect(viewer);
         wallet.deposit(Coins.ofCopper(1));
         tracking.hide();
 
-        assertFalse(fixed.isVisible());
-        assertFalse(tracking.isVisible());
+        assertFalse(visible(fixed));
+        assertFalse(visible(tracking));
         assertEquals(0, display.count(viewer));
         assertEquals(2, huds.calls.size(), "only the two initial shows");
     }
 
     @Test
-    void anOfflineViewerOrATextFormatIsACallerBug() {
+    void anOfflineViewerIsACallerBug() {
         UUID offline = UUID.randomUUID();
         assertThrows(IllegalArgumentException.class,
-                () -> display.show(offline, corner, Coins.ZERO, CoinsFormat.STANDARD));
-        assertThrows(IllegalArgumentException.class,
-                () -> display.show(viewer, corner, Coins.ZERO, CoinsFormat.LONG));
+                () -> display.show(offline, corner, Coins.ZERO));
         assertThrows(NullPointerException.class,
-                () -> display.show(viewer, null, Coins.ZERO, CoinsFormat.STANDARD));
+                () -> display.show(viewer, null, Coins.ZERO));
         assertThrows(NullPointerException.class,
-                () -> display.track(viewer, corner, null, CoinsFormat.STANDARD));
+                () -> display.show(viewer, corner, null));
+        assertThrows(NullPointerException.class,
+                () -> display.track(viewer, corner, null));
         assertTrue(huds.calls.isEmpty());
         assertEquals(0, display.count(viewer));
-    }
-
-    @Test
-    void aWalletThatCannotBeReadLeavesNothingBehind() {
-        Wallet corrupt = new Wallet() {
-            @Override
-            public WalletId id() {
-                return new WalletId("test", "corrupt");
-            }
-
-            @Override
-            protected long loadCopper() {
-                return -1;
-            }
-
-            @Override
-            protected void saveCopper(long copper) {
-            }
-        };
-        assertThrows(IllegalStateException.class,
-                () -> display.track(viewer, corner, corrupt, CoinsFormat.STANDARD));
-
-        assertEquals(0, display.count(viewer));
-        assertTrue(huds.calls.isEmpty());
-        // No listener left behind: a later write on any wallet reaches nobody.
-        new PlayerWallet(viewer).deposit(Coins.ofCopper(1));
-        assertTrue(huds.calls.isEmpty());
     }
 }

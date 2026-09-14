@@ -1,7 +1,7 @@
 package dev.galysso.obol.ui;
 
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsFormat;
+import dev.galysso.obol.api.CoinsParseException;
 import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.ScreenPosition;
 import org.junit.jupiter.api.Test;
@@ -17,18 +17,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HudTemplatesTest {
-
-    @Test
-    void onlyStandardHasATemplate() {
-        assertTrue(HudTemplates.supports(CoinsFormat.STANDARD));
-        assertFalse(HudTemplates.supports(CoinsFormat.LONG));
-        assertThrows(IllegalArgumentException.class,
-                () -> HudTemplates.document(CoinsFormat.LONG, ScreenPosition.topLeft(0, 0)));
-    }
 
     @Test
     void anchorsNameTheEdgesOfTheCorner() {
@@ -41,7 +32,7 @@ class HudTemplatesTest {
     @Test
     void theDocumentIsPlacedAndCarriesTheEmptyPillAndFeed() {
         int height = HudTemplates.PILL_HEIGHT + ChangeFeed.MAX_ROWS * (HudTemplates.ROW_HEIGHT + HudTemplates.ROW_GAP);
-        String right = HudTemplates.document(CoinsFormat.STANDARD, ScreenPosition.bottomRight(5, 6));
+        String right = HudTemplates.document(ScreenPosition.bottomRight(5, 6));
         assertTrue(right.contains("LayoutMode: Right;"));
         assertTrue(right.contains("LayoutMode: Bottom;"), "stacked from the bottom: the feed above the pill");
         assertTrue(right.contains("Anchor: (Bottom: 6, Right: 5, Height: " + height + ");"));
@@ -49,7 +40,7 @@ class HudTemplatesTest {
         assertTrue(right.contains("Group " + HudTemplates.FEED + " {"));
         assertFalse(right.contains("%"), "every placeholder is filled");
 
-        String left = HudTemplates.document(CoinsFormat.STANDARD, ScreenPosition.topLeft(5, 6));
+        String left = HudTemplates.document(ScreenPosition.topLeft(5, 6));
         assertTrue(left.contains("LayoutMode: Left;"));
         assertTrue(left.contains("LayoutMode: Top;"));
         assertFalse(left.contains("Bottom"));
@@ -70,9 +61,9 @@ class HudTemplatesTest {
     }
 
     @Test
-    void aChangeShowsOnlyItsNonZeroTiers() {
+    void aChangeShowsOnlyItsNonZeroTiers() throws CoinsParseException {
         assertEquals(List.of(tier(Denomination.GOLD, 2), tier(Denomination.COPPER, 5)),
-                HudTemplates.feedTiers(Coins.of(0, 2, 0, 5)));
+                HudTemplates.feedTiers(Coins.parse("2g 5c")));
         assertEquals(List.of(tier(Denomination.COPPER, 1)), HudTemplates.feedTiers(Coins.ofCopper(1)));
         assertEquals("+2", tier(Denomination.GOLD, 2).signedCountText(true));
         assertEquals("-15", tier(Denomination.SILVER, 15).signedCountText(false));
@@ -92,17 +83,17 @@ class HudTemplatesTest {
     }
 
     @Test
-    void tiersRunFromTheLeadingOneDownToCopper() {
+    void tiersRunFromTheLeadingOneDownToCopper() throws CoinsParseException {
         assertEquals(List.of(tier(Denomination.COPPER, 0)), HudTemplates.tiers(Coins.ZERO));
         assertEquals(List.of(tier(Denomination.SILVER, 2), tier(Denomination.COPPER, 50)),
                 HudTemplates.tiers(Coins.ofCopper(250)));
         // Zero sub-units stay, so the pill keeps its shape; zero higher tiers go.
         assertEquals(List.of(tier(Denomination.MYTHRIL, 120), tier(Denomination.GOLD, 3),
                         tier(Denomination.SILVER, 0), tier(Denomination.COPPER, 0)),
-                HudTemplates.tiers(Coins.of(120, 3, 0, 0)));
+                HudTemplates.tiers(Coins.parse("120m 3g")));
         assertEquals(List.of(tier(Denomination.GOLD, 1), tier(Denomination.SILVER, 0),
                         tier(Denomination.COPPER, 5)),
-                HudTemplates.tiers(Coins.of(0, 1, 0, 5)));
+                HudTemplates.tiers(Coins.parse("1g 5c")));
     }
 
     @Test
@@ -122,24 +113,24 @@ class HudTemplatesTest {
     }
 
     @Test
-    void onlyTheCountsThatMoveAreTinted() {
+    void onlyTheCountsThatMoveAreTinted() throws CoinsParseException {
         // +2g on 1g 5s 4c: silver and copper do not move.
         assertEquals(Map.of(Denomination.GOLD, HudTemplates.Tint.UP),
-                HudTemplates.changed(Coins.of(0, 1, 5, 4), Coins.of(0, 3, 5, 4)));
+                HudTemplates.changed(Coins.parse("1g 5s 4c"), Coins.parse("3g 5s 4c")));
         // A first coin: copper alone, up.
         assertEquals(Map.of(Denomination.COPPER, HudTemplates.Tint.UP),
                 HudTemplates.changed(Coins.ZERO, Coins.ofCopper(5)));
         // A tier that appears is a count that moved.
         assertEquals(Map.of(Denomination.GOLD, HudTemplates.Tint.UP, Denomination.SILVER, HudTemplates.Tint.UP),
-                HudTemplates.changed(Coins.of(0, 0, 90, 1), Coins.of(0, 1, 10, 1)));
+                HudTemplates.changed(Coins.parse("90s 1c"), Coins.parse("1g 10s 1c")));
     }
 
     @Test
-    void theTintFollowsTheAmountNotTheCount() {
+    void theTintFollowsTheAmountNotTheCount() throws CoinsParseException {
         // 1g - 1s = 99s: the silver count goes up, the amount goes down. The
         // gold tier is no longer shown, so it is not tinted; copper stays 0.
         assertEquals(Map.of(Denomination.SILVER, HudTemplates.Tint.DOWN),
-                HudTemplates.changed(Coins.of(0, 1, 0, 0), Coins.of(0, 0, 99, 0)));
+                HudTemplates.changed(Coins.parse("1g"), Coins.parse("99s")));
     }
 
     @Test
@@ -169,7 +160,7 @@ class HudTemplatesTest {
         assertTrue(document.contains("Group #" + tier.name() + " {"), "root id");
         assertTrue(document.contains("Label #Count {"), "count label");
         assertTrue(document.contains("HorizontalAlignment: End"), "right-aligned in its column");
-        assertTrue(document.contains(denomination == Denomination.largest()
+        assertTrue(document.contains(denomination == Denomination.MYTHRIL
                 ? "Anchor: (MinWidth: " : "Anchor: (Width: "), "column sized for two digits");
         assertTrue(document.contains("Background: \"" + tier.name() + ".png\";"), "image next to the count");
         assertTrue(document.contains("Style: @Normal;"), "the count starts in the tier's own colour");

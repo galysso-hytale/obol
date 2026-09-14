@@ -5,7 +5,6 @@ import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandEx
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.CoinsParseException;
 
 import java.util.UUID;
@@ -15,10 +14,9 @@ import java.util.UUID;
  * offline, and error wording. Only the caller gets a message: the player
  * concerned has the HUD.
  *
- * <p>Commands go through the public API only ({@code PlayerWallet},
- * {@code ObolApi.get()}), never through {@code ObolApiImpl}: they are the
- * first consumer of the API and must not need more than a third-party plugin
- * gets.</p>
+ * <p>Amounts are read and written the way the public API does
+ * ({@code Coins.parse}, {@code Coins.toString}), so that what an admin
+ * types is what a modder's users type.</p>
  */
 final class Commands {
 
@@ -33,7 +31,7 @@ final class Commands {
      */
     static Coins positiveAmount(String text) {
         Coins amount = amount(text);
-        if (amount.isZero()) {
+        if (amount.equals(Coins.ZERO)) {
             throw error("The amount must be more than 0c.");
         }
         return amount;
@@ -47,14 +45,14 @@ final class Commands {
      */
     static Coins amount(String text) {
         try {
-            return CoinsFormat.parse(text);
+            return Coins.parse(text);
         } catch (CoinsParseException e) {
             throw error(e.getMessage() + ". Example: 2g 50s 4c");
         }
     }
 
     static String format(Coins coins) {
-        return CoinsFormat.STANDARD.format(coins);
+        return coins.toString();
     }
 
     /**

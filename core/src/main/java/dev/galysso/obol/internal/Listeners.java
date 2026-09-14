@@ -9,7 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * The subscribed {@link CoinsListener}s and their dispatch, behind
- * {@code ObolApi.addListener} and {@code ObolRuntime.publish}.
+ * {@code Obol.addListener}, fed by {@link WalletImpl}.
  *
  * <p>A {@link CopyOnWriteArrayList}: subscriptions are rare, dispatches are
  * not, and a listener may add or remove listeners while being called. A

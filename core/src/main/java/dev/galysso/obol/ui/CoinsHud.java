@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.ScreenPosition;
 import dev.galysso.obol.api.event.CoinsChangedEvent;
@@ -34,8 +33,8 @@ import java.util.function.Consumer;
  * {@code HudManager}, on the other hand, is plain state of the player
  * entity and is only touched on the player's world thread; adding and
  * removing the HUD are therefore scheduled there. Until the add has run,
- * amount and position changes are folded into the initial document, so that
- * nothing is sent about a document the client does not have yet.</p>
+ * amount changes are folded into the initial document, so that nothing is
+ * sent about a document the client does not have yet.</p>
  *
  * <p>A change of amount is not shown at once: the counts roll from the
  * amount on screen to the new one over the frames of {@link Tween}, tinted
@@ -59,7 +58,6 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
 
     private final HytaleLogger logger;
     private final ScheduledExecutorService scheduler;
-    private final CoinsFormat format;
     private ScreenPosition position;
     /** Where the counts are heading. */
     private Coins target = Coins.ZERO;
@@ -87,17 +85,16 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
     /** {@link #hide()} was called: nothing is sent any more. */
     private boolean hidden;
 
-    CoinsHud(@Nonnull PlayerRef playerRef, @Nonnull String key, CoinsFormat format,
+    CoinsHud(@Nonnull PlayerRef playerRef, @Nonnull String key,
              HytaleLogger logger, ScheduledExecutorService scheduler) {
         super(playerRef, key);
-        this.format = format;
         this.logger = logger;
         this.scheduler = scheduler;
     }
 
     @Override
     protected synchronized void build(UICommandBuilder builder) {
-        builder.appendInline(null, HudTemplates.document(format, position));
+        builder.appendInline(null, HudTemplates.document(position));
         List<HudTemplates.Tier> tiers = HudTemplates.tiers(displayed);
         for (HudTemplates.Tier tier : tiers) {
             builder.append(HudTemplates.PILL, tier.document());
@@ -168,12 +165,6 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
             feedTimer = scheduler.scheduleAtFixedRate(this::feedTick,
                     ChangeFeed.TICK_MS, ChangeFeed.TICK_MS, TimeUnit.MILLISECONDS);
         }
-    }
-
-    @Override
-    public synchronized void move(ScreenPosition position) {
-        this.position = position;
-        resend();
     }
 
     @Override
@@ -330,18 +321,6 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
         builder.set(tier.countSelector(), tier.countText());
         if (tint != HudTemplates.Tint.NORMAL || !fresh) {
             builder.set(tier.styleSelector(), Value.ref(tier.document(), tint.styleName()));
-        }
-    }
-
-    /**
-     * Same path as the first display: the document is rebuilt from scratch,
-     * the client dropping the previous one first.
-     */
-    private void resend() {
-        if (shown && !hidden) {
-            UICommandBuilder builder = new UICommandBuilder();
-            build(builder);
-            send(true, builder);
         }
     }
 

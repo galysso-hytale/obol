@@ -10,11 +10,10 @@ import java.util.Objects;
 /**
  * A balance moved.
  *
- * <p>Published by {@link Wallet} after each accepted write, for every kind of
- * storage: the wallet stored by Obol and the one living in a third-party
- * object are reported alike. A write that changes nothing (a deposit of
- * zero) is not reported, so {@code before} and {@code after} always
- * differ.</p>
+ * <p>Published by {@link Wallet} after each accepted write, whoever made it:
+ * a deposit, a transfer, an administrative command. A write that changes
+ * nothing (a deposit of zero) is not reported, so {@code before} and
+ * {@code after} always differ.</p>
  *
  * <p>The event is a snapshot: by the time a {@link CoinsListener} sees it, the
  * balance may already have moved again. Read {@code wallet.balance()} when the

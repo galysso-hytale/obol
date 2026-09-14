@@ -30,7 +30,7 @@ public final class BalancesState {
             .codecVersion(1)
             .build();
 
-    /** Keyed by {@code WalletId.storageKey()}, values in copper. */
+    /** Keyed by {@code WalletId.toString()}, values in copper. */
     Map<String, Long> balances = new HashMap<>();
 
     public BalancesState() {

@@ -1,7 +1,7 @@
 package dev.galysso.obol.api;
 
 /**
- * Thrown by {@link CoinsFormat#parse(String)} when the text is not an amount.
+ * Thrown by {@link Coins#parse(String)} when the text is not an amount.
  *
  * <p>Checked on purpose: the text usually comes from a player (command
  * argument, chat), so rejecting it is a normal outcome the caller must report,
