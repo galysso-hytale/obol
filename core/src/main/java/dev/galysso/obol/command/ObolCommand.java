@@ -68,7 +68,9 @@ public final class ObolCommand extends CommandBase {
         }
 
         /**
-         * Applies the operation and returns what to tell the caller.
+         * Applies the operation and returns what to tell the caller. The
+         * player is not told: their HUD shows the change as it happens,
+         * the way it does for a change made by any other mod.
          *
          * @param amount raw text, parsed by the sub-command since only
          *               {@code set} accepts zero
@@ -86,7 +88,6 @@ public final class ObolCommand extends CommandBase {
         String apply(UUID target, String amountText) {
             Coins amount = Commands.positiveAmount(amountText);
             Coins after = new PlayerWallet(target).deposit(amount);
-            Commands.tell(target, "You received " + Commands.format(amount) + ". Balance: " + Commands.format(after));
             return "Gave " + Commands.format(amount) + " to " + Commands.name(target)
                     + ". Balance: " + Commands.format(after);
         }
@@ -107,7 +108,6 @@ public final class ObolCommand extends CommandBase {
                         + Commands.format(wallet.balance()) + ".");
             }
             Coins after = wallet.balance();
-            Commands.tell(target, Commands.format(amount) + " was taken from you. Balance: " + Commands.format(after));
             return "Took " + Commands.format(amount) + " from " + Commands.name(target)
                     + ". Balance: " + Commands.format(after);
         }
@@ -125,7 +125,6 @@ public final class ObolCommand extends CommandBase {
             // The store takes the wallet lock and publishes the change, so a
             // HUD tracking the player sees the new balance at once.
             Coins previous = ObolApi.get().balances().set(new PlayerWallet(target).id(), amount);
-            Commands.tell(target, "Your balance was set to " + Commands.format(amount) + ".");
             return "Set " + Commands.name(target) + "'s balance to " + Commands.format(amount)
                     + " (was " + Commands.format(previous) + ").";
         }
@@ -159,10 +158,6 @@ public final class ObolCommand extends CommandBase {
                 throw Commands.error("Insufficient funds: " + Commands.name(source) + " has "
                         + Commands.format(payer.balance()) + ".");
             }
-            Commands.tell(source, Commands.format(coins) + " was sent to " + Commands.name(dest)
-                    + ". Balance: " + Commands.format(payer.balance()));
-            Commands.tell(dest, "You received " + Commands.format(coins) + " from " + Commands.name(source)
-                    + ". Balance: " + Commands.format(payee.balance()));
             context.sendMessage(Message.raw("Moved " + Commands.format(coins) + " from " + Commands.name(source)
                     + " to " + Commands.name(dest) + "."));
         }

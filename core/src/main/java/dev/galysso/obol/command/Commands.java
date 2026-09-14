@@ -12,7 +12,8 @@ import java.util.UUID;
 
 /**
  * What the sub-commands share: amount parsing, naming a player who may be
- * offline, and message wording.
+ * offline, and error wording. Only the caller gets a message: the player
+ * concerned has the HUD.
  *
  * <p>Commands go through the public API only ({@code PlayerWallet},
  * {@code ObolApi.get()}), never through {@code ObolApiImpl}: they are the
@@ -62,17 +63,6 @@ final class Commands {
     static String name(UUID playerId) {
         PlayerRef online = Universe.get().getPlayer(playerId);
         return online == null ? playerId.toString() : online.getUsername();
-    }
-
-    /**
-     * Sends {@code message} to the player if they are online; a no-op
-     * otherwise, since the balance store does not need them connected.
-     */
-    static void tell(UUID playerId, String message) {
-        PlayerRef online = Universe.get().getPlayer(playerId);
-        if (online != null) {
-            online.sendMessage(Message.raw(message));
-        }
     }
 
     static GeneralCommandException error(String text) {
