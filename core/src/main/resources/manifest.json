@@ -1,0 +1,25 @@
+{
+    "Group": "Galysso",
+    "Name": "obol",
+    "Version": "0.1.0",
+    "Description": "Currency and wallets API.",
+    "Authors": [
+        {
+            "Name": "Jocelin"
+        }
+    ],
+    "Website": "https://github.com/galysso/obol",
+    "DisabledByDefault": false,
+    "IncludesAssetPack": false,
+    "Dependencies": {
+        
+    },
+    "OptionalDependencies": {
+        
+    },
+    "ServerVersion": ">=0.6.0 <0.7.0",
+    "Main": "dev.galysso.obol.ObolPlugin",
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}
