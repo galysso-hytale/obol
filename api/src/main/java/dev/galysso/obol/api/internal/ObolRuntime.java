@@ -1,6 +1,7 @@
 package dev.galysso.obol.api.internal;
 
 import dev.galysso.obol.api.WalletId;
+import dev.galysso.obol.api.event.CoinsChangedEvent;
 
 import java.util.concurrent.locks.Lock;
 
@@ -24,4 +25,15 @@ public interface ObolRuntime {
      * @param id the wallet identity
      */
     Lock lockFor(WalletId id);
+
+    /**
+     * Delivers an event to every subscribed listener.
+     *
+     * <p>Called by {@code Wallet} outside the wallet lock, once the write is
+     * done. Must not throw: a failing listener is the implementation's
+     * problem to report, not the caller's.</p>
+     *
+     * @param event the change to report
+     */
+    void publish(CoinsChangedEvent event);
 }

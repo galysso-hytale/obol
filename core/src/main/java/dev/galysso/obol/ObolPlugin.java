@@ -25,7 +25,7 @@ public class ObolPlugin extends JavaPlugin {
 
     private static final long SAVE_PERIOD_SECONDS = 30;
 
-    private final ObolApiImpl api = new ObolApiImpl();
+    private final ObolApiImpl api;
     private final Config<BalancesState> balancesFile;
     private final BalancesPersistence persistence;
     private ScheduledFuture<?> periodicSave;
@@ -33,6 +33,8 @@ public class ObolPlugin extends JavaPlugin {
 
     public ObolPlugin(@Nonnull JavaPluginInit init) {
         super(init);
+        api = new ObolApiImpl((listener, event, e) -> getLogger().atSevere().withCause(e)
+                .log("Listener %s failed on %s", listener.getClass().getName(), event));
         // withConfig() is only allowed before setup(): the server refuses it
         // once the plugin state has moved on.
         balancesFile = withConfig("balances", BalancesState.CODEC);

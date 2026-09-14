@@ -29,6 +29,31 @@ public interface ObolApi {
     BalanceStore balances();
 
     /**
+     * Subscribes to balance changes of every wallet, whatever its storage.
+     *
+     * <p>Listeners run synchronously on the thread that moved the money,
+     * outside the wallet lock, in subscription order. A listener that throws
+     * is logged and skipped; the others still run and the caller of the
+     * wallet operation never sees the exception. Adding the same listener
+     * twice calls it twice.</p>
+     *
+     * @param listener the listener to add
+     * @throws NullPointerException if {@code listener} is {@code null}
+     */
+    void addListener(CoinsListener listener);
+
+    /**
+     * Removes a previously added listener.
+     *
+     * <p>A dispatch already in progress on another thread may still deliver
+     * one last event to it.</p>
+     *
+     * @param listener the listener to remove
+     * @return {@code true} if it was subscribed
+     */
+    boolean removeListener(CoinsListener listener);
+
+    /**
      * {@return the running API instance}
      *
      * @throws IllegalStateException if Obol is not loaded, which means a

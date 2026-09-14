@@ -1,5 +1,6 @@
 package dev.galysso.obol.api;
 
+import dev.galysso.obol.api.event.CoinsChangedEvent;
 import dev.galysso.obol.api.internal.ObolApiHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -208,6 +209,74 @@ class WalletTest {
         assertTrue(failures.isEmpty(), () -> "worker failed: " + failures.getFirst());
         assertEquals(2_000, a.copper + b.copper, "money was created or destroyed");
         assertTrue(a.copper >= 0 && b.copper >= 0);
+    }
+
+    @Test
+    void depositAndWithdrawPublishBeforeAndAfter() {
+        FieldWallet wallet = new FieldWallet("a", 5);
+        wallet.deposit(TEN);
+        assertTrue(wallet.withdraw(Coins.ofCopper(3)));
+        assertEquals(List.of(
+                new CoinsChangedEvent(wallet.id(), Coins.ofCopper(5), Coins.ofCopper(15)),
+                new CoinsChangedEvent(wallet.id(), Coins.ofCopper(15), Coins.ofCopper(12))),
+                runtime.events);
+        assertEquals(List.of(false, false), runtime.publishedUnderLock, "published under the lock");
+    }
+
+    @Test
+    void nothingIsPublishedWhenNothingMoved() {
+        FieldWallet wallet = new FieldWallet("a", 5);
+        FieldWallet other = new FieldWallet("b", 5);
+        wallet.deposit(Coins.ZERO);
+        assertFalse(wallet.withdraw(TEN));
+        assertFalse(wallet.transferTo(other, TEN));
+        assertTrue(wallet.transferTo(wallet, Coins.ofCopper(5)));
+        assertTrue(wallet.transferTo(other, Coins.ZERO));
+        assertThrows(ArithmeticException.class,
+                () -> new FieldWallet("c", Long.MAX_VALUE).deposit(Coins.ofCopper(1)));
+        assertTrue(runtime.events.isEmpty(), () -> "unexpected " + runtime.events);
+    }
+
+    @Test
+    void transferPublishesDebitThenCreditAfterBothLocks() {
+        FieldWallet from = new FieldWallet("b", 10);
+        FieldWallet to = new FieldWallet("a", 1);
+        List<Boolean> lockedDuringDispatch = new ArrayList<>();
+        runtime.addListener(event -> {
+            lockedDuringDispatch.add(runtime.holdsLock(from.id()) || runtime.holdsLock(to.id()));
+        });
+        assertTrue(from.transferTo(to, Coins.ofCopper(4)));
+        assertEquals(List.of(
+                new CoinsChangedEvent(from.id(), Coins.ofCopper(10), Coins.ofCopper(6)),
+                new CoinsChangedEvent(to.id(), Coins.ofCopper(1), Coins.ofCopper(5))),
+                runtime.events);
+        assertEquals(List.of(false, false), lockedDuringDispatch);
+    }
+
+    @Test
+    void rolledBackTransferPublishesNothing() {
+        FieldWallet from = new FieldWallet("a", 10);
+        FieldWallet to = new FieldWallet("b", 1);
+        to.failOnSave = new IllegalStateException("disk on fire");
+        assertThrows(IllegalStateException.class, () -> from.transferTo(to, Coins.ofCopper(4)));
+        assertTrue(runtime.events.isEmpty());
+    }
+
+    @Test
+    void listenersMayMoveMoneyThemselves() {
+        FieldWallet wallet = new FieldWallet("a", 0);
+        FieldWallet tax = new FieldWallet("b", 0);
+        // A listener reacting to a deposit with a withdrawal on the same
+        // wallet: legal because the event is delivered outside the lock.
+        runtime.addListener(event -> {
+            if (event.wallet().equals(wallet.id()) && event.increased()) {
+                assertTrue(wallet.transferTo(tax, Coins.ofCopper(1)));
+            }
+        });
+        wallet.deposit(TEN);
+        assertEquals(9, wallet.copper);
+        assertEquals(1, tax.copper);
+        assertEquals(3, runtime.events.size());
     }
 
     @Test

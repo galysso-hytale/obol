@@ -1,6 +1,8 @@
 package dev.galysso.obol.api;
 
+import dev.galysso.obol.api.event.CoinsChangedEvent;
 import dev.galysso.obol.api.internal.ObolApiHolder;
+import dev.galysso.obol.api.internal.ObolRuntime;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -31,6 +33,11 @@ import java.util.concurrent.locks.Lock;
  * whatever the storage. {@link Wallet#transferTo} takes both locks in the
  * global order of {@link WalletId#storageKey()}, so cross transfers cannot
  * deadlock.</p>
+ *
+ * <p>Every accepted write is reported to the {@link CoinsListener}s
+ * subscribed on {@link ObolApi}, as a {@link CoinsChangedEvent}, once the
+ * lock is released. Again whatever the storage: this is what makes a
+ * third-party wallet a first-class citizen for displays and other plugins.</p>
  *
  * <p>The storage hooks trade in {@code long} because that is what a codec, a
  * component or a file persists; everything above them is typed
@@ -80,7 +87,7 @@ public abstract class Wallet {
      * @throws IllegalStateException if the storage holds a negative value
      */
     public final Coins balance() {
-        Lock lock = lock();
+        Lock lock = runtime().lockFor(id());
         lock.lock();
         try {
             return Coins.ofCopper(load());
@@ -115,15 +122,20 @@ public abstract class Wallet {
      */
     public final Coins deposit(Coins amount) {
         Objects.requireNonNull(amount, "amount");
-        Lock lock = lock();
+        ObolRuntime runtime = runtime();
+        Coins before;
+        Coins after;
+        Lock lock = runtime.lockFor(id());
         lock.lock();
         try {
-            Coins after = Coins.ofCopper(load()).plus(amount);
+            before = Coins.ofCopper(load());
+            after = before.plus(amount);
             saveCopper(after.copper());
-            return after;
         } finally {
             lock.unlock();
         }
+        publish(runtime, before, after);
+        return after;
     }
 
     /**
@@ -140,18 +152,24 @@ public abstract class Wallet {
      */
     public final boolean withdraw(Coins amount) {
         Objects.requireNonNull(amount, "amount");
-        Lock lock = lock();
+        ObolRuntime runtime = runtime();
+        Coins before;
+        Coins after;
+        Lock lock = runtime.lockFor(id());
         lock.lock();
         try {
-            Optional<Coins> after = Coins.ofCopper(load()).minus(amount);
-            if (after.isEmpty()) {
+            before = Coins.ofCopper(load());
+            Optional<Coins> covered = before.minus(amount);
+            if (covered.isEmpty()) {
                 return false;
             }
-            saveCopper(after.get().copper());
-            return true;
+            after = covered.get();
+            saveCopper(after.copper());
         } finally {
             lock.unlock();
         }
+        publish(runtime, before, after);
+        return true;
     }
 
     /**
@@ -165,6 +183,9 @@ public abstract class Wallet {
      *
      * <p>A transfer from a wallet to itself (same {@link #id()}) writes
      * nothing and returns whether the balance covers {@code amount}.</p>
+     *
+     * <p>A successful transfer publishes two events once both locks are
+     * released: the debit of {@code this}, then the credit of {@code to}.</p>
      *
      * <p><strong>The return value is the contract: never ignore it.</strong></p>
      *
@@ -182,45 +203,58 @@ public abstract class Wallet {
         if (id().equals(to.id())) {
             return canAfford(amount);
         }
+        ObolRuntime runtime = runtime();
         // Global order: the lexicographically smaller key is locked first,
         // whichever side is paying. Two threads crossing A->B and B->A then
         // contend on the same first lock instead of deadlocking.
         boolean thisFirst = id().storageKey().compareTo(to.id().storageKey()) < 0;
-        Lock first = thisFirst ? lock() : to.lock();
-        Lock second = thisFirst ? to.lock() : lock();
+        Lock first = runtime.lockFor(thisFirst ? id() : to.id());
+        Lock second = runtime.lockFor(thisFirst ? to.id() : id());
+        Transfer done;
         first.lock();
         try {
             second.lock();
             try {
-                return transferLocked(to, amount);
+                done = transferLocked(to, amount);
             } finally {
                 second.unlock();
             }
         } finally {
             first.unlock();
         }
-    }
-
-    private boolean transferLocked(Wallet to, Coins amount) {
-        long fromBefore = load();
-        Optional<Coins> fromAfter = Coins.ofCopper(fromBefore).minus(amount);
-        if (fromAfter.isEmpty()) {
+        if (done == null) {
             return false;
         }
+        publish(runtime, done.fromBefore, done.fromAfter);
+        to.publish(runtime, done.toBefore, done.toAfter);
+        return true;
+    }
+
+    /** What a completed transfer wrote, carried out of the locked section. */
+    private record Transfer(Coins fromBefore, Coins fromAfter, Coins toBefore, Coins toAfter) {
+    }
+
+    private Transfer transferLocked(Wallet to, Coins amount) {
+        Coins fromBefore = Coins.ofCopper(load());
+        Optional<Coins> fromAfter = fromBefore.minus(amount);
+        if (fromAfter.isEmpty()) {
+            return null;
+        }
         // Computed before any write so that an overflow leaves both intact.
-        Coins toAfter = Coins.ofCopper(to.load()).plus(amount);
+        Coins toBefore = Coins.ofCopper(to.load());
+        Coins toAfter = toBefore.plus(amount);
         saveCopper(fromAfter.get().copper());
         try {
             to.saveCopper(toAfter.copper());
         } catch (RuntimeException | Error e) {
             try {
-                saveCopper(fromBefore);
+                saveCopper(fromBefore.copper());
             } catch (RuntimeException | Error rollback) {
                 e.addSuppressed(rollback);
             }
             throw e;
         }
-        return true;
+        return new Transfer(fromBefore, fromAfter.get(), toBefore, toAfter);
     }
 
     private long load() {
@@ -232,8 +266,22 @@ public abstract class Wallet {
         return copper;
     }
 
-    private Lock lock() {
-        return ObolApiHolder.runtime().lockFor(id());
+    /**
+     * Reports a write, outside the lock. A write that moved nothing (a
+     * deposit of zero) is not an event.
+     */
+    private void publish(ObolRuntime runtime, Coins before, Coins after) {
+        if (!before.equals(after)) {
+            runtime.publish(new CoinsChangedEvent(id(), before, after));
+        }
+    }
+
+    /**
+     * Resolved once per operation so that the lock and the event go to the
+     * same runtime even if Obol is uninstalled in between.
+     */
+    private static ObolRuntime runtime() {
+        return ObolApiHolder.runtime();
     }
 
     /**
