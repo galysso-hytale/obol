@@ -10,7 +10,7 @@
     ],
     "Website": "https://github.com/galysso/obol",
     "DisabledByDefault": false,
-    "IncludesAssetPack": false,
+    "IncludesAssetPack": true,
     "Dependencies": {
         
     },

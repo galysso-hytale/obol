@@ -1,7 +1,6 @@
 package dev.galysso.obol.ui;
 
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.CoinsListener;
 import dev.galysso.obol.api.CoinsOverlay;
 import dev.galysso.obol.api.ScreenPosition;
@@ -21,7 +20,6 @@ final class Overlay implements CoinsOverlay {
 
     private final UUID viewer;
     private final OverlayHud hud;
-    private final CoinsFormat format;
     private final Wallet tracked;
     private final Consumer<Overlay> onHidden;
     private ScreenPosition position;
@@ -35,11 +33,10 @@ final class Overlay implements CoinsOverlay {
      * @param onHidden called once, when the overlay leaves the screen for
      *                 any reason, so the registry can forget it
      */
-    Overlay(UUID viewer, OverlayHud hud, CoinsFormat format, ScreenPosition position,
+    Overlay(UUID viewer, OverlayHud hud, ScreenPosition position,
             Wallet tracked, Consumer<Overlay> onHidden) {
         this.viewer = viewer;
         this.hud = hud;
-        this.format = format;
         this.position = position;
         this.tracked = tracked;
         this.onHidden = onHidden;
@@ -58,9 +55,9 @@ final class Overlay implements CoinsOverlay {
      * throws, the overlay never becomes visible.
      */
     synchronized void show(Coins fixed) {
-        String text = format.format(tracked == null ? fixed : tracked.balance());
+        Coins coins = tracked == null ? fixed : tracked.balance();
         visible = true;
-        hud.show(position, text);
+        hud.show(position, coins);
     }
 
     /**
@@ -88,7 +85,7 @@ final class Overlay implements CoinsOverlay {
      */
     synchronized void refresh() {
         if (visible) {
-            hud.setText(format.format(tracked.balance()));
+            hud.setCoins(tracked.balance());
         }
     }
 
@@ -96,7 +93,7 @@ final class Overlay implements CoinsOverlay {
     public synchronized void update(Coins coins) {
         Objects.requireNonNull(coins, "coins");
         if (visible && tracked == null) {
-            hud.setText(format.format(coins));
+            hud.setCoins(coins);
         }
     }
 

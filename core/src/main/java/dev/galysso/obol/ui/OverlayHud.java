@@ -1,10 +1,11 @@
 package dev.galysso.obol.ui;
 
+import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.ScreenPosition;
 
 /**
  * One overlay as the server sees it: a document on a player's screen whose
- * text and placement can change.
+ * amount and placement can change.
  *
  * <p>The seam between {@link CoinsDisplayImpl}, which is plain JDK code and
  * unit-tested, and {@link CoinsHud}, which talks to the server. Calls may
@@ -13,10 +14,10 @@ import dev.galysso.obol.api.ScreenPosition;
 public interface OverlayHud {
 
     /** Puts the document on the screen. Called once, first. */
-    void show(ScreenPosition position, String text);
+    void show(ScreenPosition position, Coins coins);
 
     /** Changes the amount shown. */
-    void setText(String text);
+    void setCoins(Coins coins);
 
     /** Moves the document. */
     void move(ScreenPosition position);

@@ -1,0 +1,16 @@
+// One tier of the balance pill: the count, then the coin. Appended into the
+// pill by CoinsHud for each tier that has coins; the count is set through
+// "#Copper #Count.Text". TextColor is Denomination.COPPER.color().
+Group #Copper {
+  LayoutMode: Left;
+
+  Label #Count {
+    Text: "0";
+    Style: (FontSize: 22, TextColor: #B87333, RenderBold: true, VerticalAlignment: Center);
+  }
+
+  Group {
+    Background: "Copper.png";
+    Anchor: (Width: 24, Height: 24, Left: 3, Right: 8);
+  }
+}

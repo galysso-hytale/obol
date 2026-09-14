@@ -1,5 +1,7 @@
 # Obol
 
+<img src="docs/icon.png" alt="" width="96" align="right">
+
 Hytale economy plugin. Every player has a balance made of four coin
 denominations, held as one number, and other plugins get a public API to
 give, take, transfer and display coins — for their own players, shops,
@@ -139,7 +141,11 @@ price.hide();
 
 `ScreenPosition` is a corner plus offsets in pixels. The viewer must be
 connected and in a world (`IllegalArgumentException` otherwise). Only
-`CoinsFormat.STANDARD` has an on-screen template in this version.
+`CoinsFormat.STANDARD` has an on-screen template in this version: a pill
+showing, from the largest tier down, each count next to its coin icon
+(`2 [gold] 35 [silver] 4 [copper]` for `2g 35s 4c`, empty tiers omitted).
+The icons ship in Obol's asset pack, the client fetches them from the server
+like any other `Common/` asset.
 
 Overlays belong to the player's session: they vanish on disconnect and are
 not put back on reconnect. A plugin that wants a permanent overlay creates it
@@ -264,11 +270,25 @@ in a browser, then times out. Two ways through it:
   With the Flatpak launcher that path is under
   `~/.var/app/com.hypixel.HytaleLauncher/data/Hytale/install/...`.
 
+### Asset pack
+
+`core/src/main/resources` is also the plugin's asset pack (`includes_pack =
+true`, `IncludesAssetPack` in the manifest): it is laid out like the game's
+`Assets.zip`, so the HUD documents and coin images live in
+`Common/UI/Custom/Obol/`. Each tier has a `<Tier>.ui` and a `<Tier>.png`,
+named after `Denomination`; the HUD appends one document per non-zero tier
+into an inline root, which is how the image path stays relative to a real
+file. Image paths in a `.ui` resolve relative to that file. The originals
+(64×64 pixel art, plus a 256px mod icon in `docs/`) are in `tmp/`; the shipped
+copies are cropped to 48×48 so that the 24px on-screen box is an exact 2:1
+downscale.
+
 ### Dev server caveat
 
 `hytale-tools` links `core/run/mods/Galysso_obol` to `core/src/main/resources`,
-so the dev server's `balances.json` lands in the sources. It is excluded from
-the jar and git-ignored; delete it to reset the dev economy.
+so the dev server reads the pack live, and its `balances.json` lands in the
+sources. That file is excluded from the jar and git-ignored; delete it to
+reset the dev economy.
 
 ### Smoke test in game
 

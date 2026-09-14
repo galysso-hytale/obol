@@ -1,5 +1,6 @@
 package dev.galysso.obol.ui;
 
+import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.ScreenPosition;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 /**
  * An {@link OverlayHuds} with no screen: every call on every overlay is
  * written down as {@code "<key> <call>"}, in order, across all overlays.
+ * Amounts are written in the overlay's format, for readable expectations.
  */
 final class RecordingHuds implements OverlayHuds {
 
@@ -30,13 +32,13 @@ final class RecordingHuds implements OverlayHuds {
         keys.add(key);
         return Optional.of(new OverlayHud() {
             @Override
-            public void show(ScreenPosition position, String text) {
-                calls.add(key + " show " + HudTemplates.anchor(position) + " \"" + text + "\"");
+            public void show(ScreenPosition position, Coins coins) {
+                calls.add(key + " show " + HudTemplates.anchor(position) + " \"" + format.format(coins) + "\"");
             }
 
             @Override
-            public void setText(String text) {
-                calls.add(key + " text \"" + text + "\"");
+            public void setCoins(Coins coins) {
+                calls.add(key + " text \"" + format.format(coins) + "\"");
             }
 
             @Override

@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.ScreenPosition;
 
@@ -23,15 +24,19 @@ import java.util.function.Consumer;
  * {@code HudManager}, on the other hand, is plain state of the player
  * entity and is only touched on the player's world thread; adding and
  * removing the HUD are therefore scheduled there. Until the add has run,
- * text and position changes are folded into the initial document, so that
+ * amount and position changes are folded into the initial document, so that
  * nothing is sent about a document the client does not have yet.</p>
+ *
+ * <p>Every change resends the whole document: which tiers appear depends on
+ * the amount, and a document of a handful of elements is cheaper to rebuild
+ * than to patch.</p>
  */
 final class CoinsHud extends CustomUIHud implements OverlayHud {
 
     private final HytaleLogger logger;
     private final CoinsFormat format;
     private ScreenPosition position;
-    private String text = "";
+    private Coins coins = Coins.ZERO;
     /** The client has the document: changes are sent as they come. */
     private boolean shown;
     /** {@link #hide()} was called: nothing is sent any more. */
@@ -46,13 +51,16 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
     @Override
     protected synchronized void build(UICommandBuilder builder) {
         builder.appendInline(null, HudTemplates.document(format, position));
-        builder.set(HudTemplates.AMOUNT_TEXT, text);
+        for (HudTemplates.Tier tier : HudTemplates.tiers(coins)) {
+            builder.append(HudTemplates.PILL, tier.document());
+            builder.set(tier.countSelector(), tier.countText());
+        }
     }
 
     @Override
-    public synchronized void show(ScreenPosition position, String text) {
+    public synchronized void show(ScreenPosition position, Coins coins) {
         this.position = position;
-        this.text = text;
+        this.coins = coins;
         onWorldThread(player -> {
             synchronized (this) {
                 if (hidden) {
@@ -66,23 +74,15 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
     }
 
     @Override
-    public synchronized void setText(String text) {
-        this.text = text;
-        if (shown && !hidden) {
-            send(false, new UICommandBuilder().set(HudTemplates.AMOUNT_TEXT, text));
-        }
+    public synchronized void setCoins(Coins coins) {
+        this.coins = coins;
+        resend();
     }
 
     @Override
     public synchronized void move(ScreenPosition position) {
         this.position = position;
-        if (shown && !hidden) {
-            // Same path as the first display: the document is rebuilt from
-            // scratch, the client dropping the previous one first.
-            UICommandBuilder builder = new UICommandBuilder();
-            build(builder);
-            send(true, builder);
-        }
+        resend();
     }
 
     @Override
@@ -93,6 +93,18 @@ final class CoinsHud extends CustomUIHud implements OverlayHud {
         hidden = true;
         if (shown) {
             onWorldThread(player -> player.getHudManager().removeCustomHud(getPlayerRef(), getKey()));
+        }
+    }
+
+    /**
+     * Same path as the first display: the document is rebuilt from scratch,
+     * the client dropping the previous one first.
+     */
+    private void resend() {
+        if (shown && !hidden) {
+            UICommandBuilder builder = new UICommandBuilder();
+            build(builder);
+            send(true, builder);
         }
     }
 

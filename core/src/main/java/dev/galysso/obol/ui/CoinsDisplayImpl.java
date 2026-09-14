@@ -68,7 +68,7 @@ public final class CoinsDisplayImpl implements CoinsDisplay {
         OverlayHud hud = huds.open(viewer, "obol:" + nextKey.incrementAndGet(), format)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Player " + viewer + " is not connected"));
-        Overlay overlay = new Overlay(viewer, hud, format, position, tracked, this::forget);
+        Overlay overlay = new Overlay(viewer, hud, position, tracked, this::forget);
         byViewer.computeIfAbsent(viewer, ignored -> ConcurrentHashMap.newKeySet()).add(overlay);
         return overlay;
     }

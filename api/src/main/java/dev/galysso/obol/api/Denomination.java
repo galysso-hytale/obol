@@ -35,10 +35,10 @@ public enum Denomination {
     }
 
     /**
-     * {@return the short symbol used by {@link CoinsFormat#STANDARD}}
+     * {@return the short symbol used by {@link CoinsFormat#STANDARD} in text}
      *
-     * @apiNote Placeholder: the English initial ({@code c}, {@code s},
-     *          {@code g}, {@code m}) until 2D assets replace text rendering.
+     * <p>The English initial ({@code c}, {@code s}, {@code g}, {@code m}).
+     * On screen, {@code CoinsDisplay} draws the coin itself instead.</p>
      */
     public String symbol() {
         return symbol;
