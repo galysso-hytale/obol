@@ -127,23 +127,26 @@ def purse_boxes():
     """La bourse, a la maniere des items vanilla (l'oeuf est un cube, le sac de
     farine trois boites) : peu de boites, la rondeur dans la texture.
 
-    Corps en trois boites (un dessous rentre, le ventre, une epaule tournee a
-    45 degres pour casser l'etage), un col, la cordelette avec son fermoir et
-    deux brins qui pendent devant, et le fronce au-dessus du col en deux
-    boites croisees a 45 degres, plus larges que le col."""
+    Son identite, comme celle des pieces, tient a une silhouette et une
+    couleur : un ventre a huit pans (deux boites croisees a 45 degres, ce que
+    fait Hytale pour ses bouchons de potion, une etoile a huit branches vue de
+    dessus comme l'or d'Obol), un cuir lie-de-vin qu'aucun item vanilla ne
+    porte, et la cordelette en or. Pas d'emblème : rien a lire, juste a
+    reconnaitre."""
     b = []
-    b.append(Box("Bottom", (12, 2, 10), (0, 1, 0), "body"))
-    b.append(Box("Belly", (14, 8, 12), (0, 6, 0), "body"))
-    b.append(Box("Shoulder", (9.5, 2.5, 9.5), (0, 11.25, 0), "body",
+    b.append(Box("Bottom", (11, 2, 11), (0, 1, 0), "body"))
+    b.append(Box("Belly", (13, 8, 13), (0, 6, 0), "body"))
+    b.append(Box("Belly_X", (12, 7.5, 12), (0, 6, 0), "body",
                  orientation=q_axis((0, 1, 0), 45)))
-    b.append(Box("Neck", (6, 3, 5.5), (0, 14, 0), "pleats"))
-    b.append(Box("Cord", (7.5, 1.5, 7), (0, 13.75, 0), "cord"))
-    # le fermoir : une piece d'or a travers laquelle passe la cordelette
-    b.append(Box("Clasp", (3.5, 3.5, 0.8), (0, 13.75, 3.8), "stamp"))
-    b.append(Box("Tassel_L", (1, 5, 1), (-1.0, 10.5, 4.2), "tassel"))
-    b.append(Box("Tassel_R", (1, 3.5, 1), (1.2, 11.25, 4.2), "tassel"))
+    b.append(Box("Shoulder", (9, 2.5, 9), (0, 11.25, 0), "body",
+                 orientation=q_axis((0, 1, 0), 45)))
+    b.append(Box("Neck", (6, 3, 6), (0, 14, 0), "pleats"))
+    b.append(Box("Cord", (7.5, 1.5, 7.5), (0, 13.75, 0), "cord"))
+    b.append(Box("Knot", (2.5, 2.5, 1.2), (0, 13.75, 4.2), "cord"))
+    b.append(Box("Tassel_L", (1, 5, 1), (-1.0, 10.5, 4.4), "tassel"))
+    b.append(Box("Tassel_R", (1, 3.5, 1), (1.2, 11.25, 4.4), "tassel"))
     # le fronce : deux boites croisees, une etoile a huit branches vue de dessus
-    b.append(Box("Top", (7, 3.5, 6.5), (0, 17.25, 0), "pleats",
+    b.append(Box("Top", (7, 3.5, 7), (0, 17.25, 0), "pleats",
                  orientation=q_axis((1, 0, 0), 4)))
     b.append(Box("Top_X", (6.5, 3.2, 6.5), (0, 17.35, 0), "pleats",
                  orientation=q_mul(q_axis((0, 1, 0), 45), q_axis((0, 0, 1), -5))))
@@ -161,10 +164,6 @@ def pack_uv(boxes):
             w, h = (math.ceil(v) for v in face_dims(box.size, face))
             side = {"front": "fb", "back": "fb", "right": "lr", "left": "lr",
                     "top": "tb", "bottom": "tb"}[face]
-            if box.material == "stamp" and face == "front":
-                side = "front"          # la piece, jamais partage
-            if box.name == "Belly" and face == "front":
-                side = "front"          # porte l'emblem, jamais partage
             if box.material == "pleats" and side == "tb":
                 side = face             # dessus fronce, dessous cuir
             owner = box.material if box.material in SHARED_MATERIALS else id(box)
@@ -240,14 +239,14 @@ def model_json(boxes):
 # (aplats chauds, ombres douces, grain leger, pas de contour noir)
 # =============================================================================
 
-# Cuir : quatre tons, comme les textures vanilla (sac de farine, cuir leger).
-LEATHER = {"light": (196, 140, 88), "base": (158, 106, 62), "dark": (108, 66, 38),
-           "seam": (66, 38, 22)}
-# Cordelette en laine naturelle.
-CORD = {"light": (226, 206, 168), "base": (196, 172, 130), "dark": (140, 118, 84)}
-GOLD = {"light": (255, 240, 113), "base": (228, 183, 31), "shade": (174, 107, 22),
-        "edge": (153, 76, 21)}
-HOLE = (46, 32, 26)
+# Cuir sang-de-boeuf, quatre tons comme les textures vanilla. Rouge chaud
+# (teinte ~7 degres) pour s'accorder au cuivre et a l'or, et assez clair
+# pour ne pas se fondre dans le bleu nuit des cases d'inventaire (V ~0.3).
+LEATHER = {"light": (214, 118, 88), "base": (168, 70, 56), "dark": (112, 42, 38),
+           "seam": (60, 20, 20)}
+# Cordelette en or, la couleur des pieces d'Obol.
+CORD = {"light": (255, 226, 120), "base": (224, 176, 44), "dark": (162, 112, 26)}
+HOLE = (48, 16, 18)
 
 
 def lerp(a, b, t):
@@ -276,7 +275,7 @@ def value_noise(w, h, cells, seed):
 def paint_body(px, rect, seed, face):
     """Cuir d'une face du corps, rondeur peinte : clair vers le centre-haut,
     sombre vers les bords (le vignettage des textures vanilla), un grain
-    leger, et sur le devant une couture au ras du bas."""
+    leger."""
     x0, y0, w, h = rect
     noise = value_noise(w, h, 3, seed)
     rnd = random.Random(seed + 1)
@@ -295,39 +294,6 @@ def paint_body(px, rect, seed, face):
             c = lerp(c, LEATHER["dark"], noise[y][x] * 0.18)
             g = rnd.randint(-4, 4)
             px[x0 + x, y0 + y] = tuple(max(0, min(255, v + g)) for v in c) + (255,)
-    if face in ("front", "back") and h >= 6:
-        for x in range(2, w - 2, 2):
-            px[x0 + x, y0 + h - 2] = LEATHER["seam"] + (255,)
-
-
-def paint_emblem(px, rect):
-    """L'obole : une piece d'or embossee sur le devant, ombre portee en bas
-    a droite. Le seul ornement, celui d'une bourse a monnaie."""
-    x0, y0, w, h = rect
-    cx, cy = x0 + w // 2, y0 + h // 2 - 1
-    r = 3
-    for y in range(-r, r + 2):
-        for x in range(-r, r + 2):
-            d = math.hypot(x, y)
-            ds = math.hypot(x - 1, y - 1)
-            if d > r + 0.3 and ds <= r + 0.3:
-                px[cx + x, cy + y] = LEATHER["seam"] + (255,)
-    for y in range(-r, r + 1):
-        for x in range(-r, r + 1):
-            d = math.hypot(x, y)
-            if d > r + 0.3:
-                continue
-            if d > r - 0.8:
-                c = GOLD["edge"]
-            elif x + y < -r * 0.8:
-                c = GOLD["light"]
-            elif x + y > r * 0.7:
-                c = GOLD["shade"]
-            else:
-                c = GOLD["base"]
-            if x == 0 and y == 0:
-                c = GOLD["shade"]
-            px[cx + x, cy + y] = c + (255,)
 
 
 def paint_pleats(px, rect, seed):
@@ -381,30 +347,6 @@ def paint_tassel(px, rect):
             px[x0 + x, y0 + y] = c + (255,)
 
 
-def paint_stamp(px, rect):
-    """La piece d'or du tampon Obol, vue de face."""
-    x0, y0, w, h = rect
-    cx, cy = x0 + w // 2, y0 + h // 2
-    r = min(w, h) // 2
-    for y in range(-r, r + 1):
-        for x in range(-r, r + 1):
-            d = math.hypot(x, y)
-            if d > r + 0.3:
-                continue
-            if d > r - 0.8:
-                c = GOLD["edge"]
-            elif x + y < -r * 0.9:
-                c = GOLD["light"]
-            elif x + y > r * 0.7:
-                c = GOLD["shade"]
-            else:
-                c = GOLD["base"]
-            if abs(x) <= 1 and abs(y) <= 1:
-                c = GOLD["shade"]
-            px[cx + x, cy + y] = c + (255,)
-    px[cx - 1, cy - 1] = GOLD["light"] + (255,)
-
-
 def paint_texture(boxes):
     img = Image.new("RGBA", (TEX_SIZE, TEX_SIZE), (0, 0, 0, 0))
     px = img.load()
@@ -420,8 +362,6 @@ def paint_texture(boxes):
             m = box.material
             if m == "body":
                 paint_body(px, rect, seed, face)
-                if box.name == "Belly" and face == "front":
-                    paint_emblem(px, rect)
             elif m == "pleats":
                 if face == "top":
                     paint_hole(px, rect)
@@ -433,14 +373,6 @@ def paint_texture(boxes):
                 paint_cord(px, rect, seed)
             elif m == "tassel":
                 paint_tassel(px, rect)
-            elif m == "stamp":
-                if face == "front":
-                    paint_stamp(px, rect)
-                else:
-                    x0, y0, w, h = rect
-                    for y in range(h):
-                        for x in range(w):
-                            px[x0 + x, y0 + y] = GOLD["edge"] + (255,)
     return img
 
 

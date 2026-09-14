@@ -2,30 +2,55 @@
 
 <img src="docs/icon.png" alt="" width="96" align="right">
 
-Hytale economy plugin. Every player has a balance made of four coin
-denominations, held as one number, and other plugins get a public API to
-give, take, transfer and display coins — for their own players, shops,
-merchants or guild banks.
+Minimalist currency mod for Hytale, with an RPG feel.
 
-| Coin | Symbol | Worth |
-|---|---|---|
-| Copper | `c` | 1 |
-| Silver | `s` | 100 copper |
-| Gold | `g` | 100 silver |
-| Mythril | `m` | 100 gold |
+Obol is the base other mods build on, not a feature set: a balance for
+every player (and anything else that should hold coins), an API to move
+them, and a readable display of the result.
 
-The four coins are only ways to write and display an amount: a balance is a
-single `long` in copper, and `2g 35s 4c` is `20 354` copper. Balances never
-go negative; a withdrawal that cannot be covered is refused, nothing else.
+- Just a currency. No shops, taxes or jobs: what Obol does to your server
+  is what the mods built on it do; gameplay belongs to add-ons.
+- Four coins, copper to mythril, so 1 <img src="core/src/main/resources/Common/UI/Custom/Obol/Mythril.png" alt="mythril" height="16" align="absmiddle"> 2 <img src="core/src/main/resources/Common/UI/Custom/Obol/Gold.png" alt="gold" height="16" align="absmiddle"> 35 <img src="core/src/main/resources/Common/UI/Custom/Obol/Silver.png" alt="silver" height="16" align="absmiddle"> 4 <img src="core/src/main/resources/Common/UI/Custom/Obol/Copper.png" alt="copper" height="16" align="absmiddle"> reads at a glance.
 
-## Using the API from another plugin
+## Players and server owners
 
-Compile against `obol-api` (JDK-only, no server types) and declare the
-manifest dependency so the server loads Obol first:
+Drop `Obol-<version>.jar` into the server's `mods/` folder, or, for a
+single-player world, into the game's `UserData/Mods`:
+- Windows: `%APPDATA%\Hytale\UserData\Mods`
+- macOS: `~/Library/Application Support/Hytale/UserData/Mods`
+- Linux (Flatpak launcher): `~/.var/app/com.hypixel.HytaleLauncher/data/Hytale/UserData/Mods`
+
+Nothing to configure. Every player sees their balance top right of the
+screen. When it moves, the counts roll to the new amount, green for a gain
+and red for a loss, and the change stays listed under it for a few seconds.
+
+Players have no commands: coins come and go through the mods built on Obol
+(shops, quests, trades…). Admins (`obol.admin`, given to `hytale:Admin` by
+default) have:
+
+| Command | Effect |
+|---|---|
+| `/obol give <player> <amount>` | Adds coins. |
+| `/obol take <player> <amount>` | Removes coins. |
+| `/obol set <player> <amount>` | Sets the balance. |
+| `/obol transfer <from> <to> <amount>` | Moves coins from one player to another. |
+
+Players are given by name or UUID, online or not. Amounts read `2g 35s 4c`
+(`c s g m` for copper, silver, gold, mythril, ×100 from one to the next),
+also `2g35s`, `250s` or a bare number in copper. A balance never goes below
+zero: a `take` or `transfer` it cannot cover is refused, nothing else.
+
+Balances are in `mods/Galysso_obol/balances.json` (previous version in
+`balances.json.bak`). A file Obol cannot read stops the plugin, and the mods
+depending on it, rather than starting an empty economy.
+
+## Modders
+
+### Setup
 
 ```kotlin
 dependencies {
-    compileOnly("dev.galysso.obol:obol-api:0.1.0")
+    compileOnly("dev.galysso.obol:obol-api:0.1.0")   // JDK-only, no server types
 }
 ```
 
@@ -35,268 +60,208 @@ dependencies {
 
 `obol-api` is not on a public repository yet: run
 `./gradlew :api:publishToMavenLocal` from this repository and add
-`mavenLocal()` to your repositories. At runtime the classes come from Obol's
-own jar — never bundle them.
+`mavenLocal()` to your repositories. Never bundle it: at runtime the classes
+come from Obol's own jar. For an optional integration, put Obol under
+`OptionalDependencies` and use `ObolApi.find()` instead of `ObolApi.get()`.
 
-A player's wallet is a `PlayerWallet` on their UUID. Nothing is cached in it:
-it is a handle on the balance, safe to create anywhere, any number of times.
+### Charging a player
 
 ```java
 import dev.galysso.obol.api.*;
 
-Wallet buyer = new PlayerWallet(player.getUuid());
+Wallet buyer = new PlayerWallet(player.getUuid());   // a stateless handle: create it anywhere
 Coins price = Coins.of(Denomination.GOLD, 2);
-if (!buyer.withdraw(price)) {
+if (!buyer.withdraw(price)) {                        // atomic: false means nothing moved
     player.sendMessage(Message.raw("Not enough coins: " + buyer.balance() + " / " + price));
     return;
 }
 giveItem(player);
-player.sendMessage(Message.raw("Balance: " + buyer.balance()));
 ```
 
-What a `Wallet` can do:
-
-| Method | Behaviour |
-|---|---|
-| `balance()` | Current amount. |
-| `canAfford(coins)` | Read-only check; prefer the boolean of `withdraw`, which is atomic. |
-| `deposit(coins)` | Adds; returns the new balance. |
-| `withdraw(coins)` | Removes, or returns `false` and changes nothing. |
-| `transferTo(wallet, coins)` | Moves money between any two wallets, all or nothing; `false` if the source cannot cover it. |
-
-Every operation runs under a lock Obol keeps per wallet, so concurrent
-callers never see a torn read-modify-write, and transfers cannot deadlock.
-
-Amounts are `Coins`, a value type: `Coins.of(Denomination.SILVER, 50)`,
-`Coins.of(mythril, gold, silver, copper)`, `Coins.ofCopper(20_354)`, with
-`plus`, `minus` (empty below zero), `times`, `covers` and `breakdown()`.
-`CoinsFormat.STANDARD` renders `2g 35s 4c` (also `toString()`),
-`CoinsFormat.LONG` renders `2 gold, 35 silver, 4 copper`, and
-`CoinsFormat.parse("2g 50s")` reads what a player typed.
-
-For an optional integration, put Obol under `OptionalDependencies` and use
-`ObolApi.find()` (an `Optional`) instead of `ObolApi.get()`.
-
-## Giving something else a wallet
-
-Anything can hold coins by extending `Wallet`. All the rules (non-negative
-balance, atomicity, transfers, events) are implemented once in `Wallet` and
-are `final`; a subclass only says *where* its single storage variable lives.
-Two levels of commitment:
+### Giving anything a wallet
 
 ```java
-// Storage managed by Obol: three lines. The balance lives in Obol's
-// balances.json under "guild:<id>", persisted and locked like a player's.
+// Balance stored by Obol, under "guild:<id>" in balances.json.
 final class GuildWallet extends StoredWallet {
     private final String guildId;
-
     GuildWallet(String guildId) { this.guildId = guildId; }
-
     @Override public WalletId id() { return new WalletId("guild", guildId); }
 }
 
-// Storage with the owning object: the balance lives in a persistent ECS
-// component, or in the plugin's own file, and travels with it.
+// Balance stored by you (a persistent ECS component, your own file…).
 final class MerchantWallet extends Wallet {
-    private final MerchantComponent component;   // holds a `long copper`
-
-    MerchantWallet(MerchantComponent component) { this.component = component; }
-
-    @Override public WalletId id()              { return new WalletId("merchant", component.merchantId()); }
-    @Override protected long loadCopper()       { return component.copper(); }
-    @Override protected void saveCopper(long c) { component.setCopper(c); }
+    private final MerchantComponent c;               // holds a `long copper`
+    MerchantWallet(MerchantComponent c) { this.c = c; }
+    @Override public WalletId id()              { return new WalletId("merchant", c.merchantId()); }
+    @Override protected long loadCopper()       { return c.copper(); }
+    @Override protected void saveCopper(long v) { c.setCopper(v); }
 }
 ```
 
-A `WalletId` is a `kind` (your plugin's own namespace, e.g. `"guild"`) and a
-`key`, both `[a-z0-9_-]+`; Obol's players use `"player"`. The hooks are
-called under the wallet lock, on the thread that moves the money: whatever
-they touch must be safe to read and write from there. A `StoredWallet` entry
-is never removed on its own; call `ObolApi.get().balances().delete(id)` when
-the owner is gone for good.
+Both get the same rules, transfers, events and displays as a player. The two
+hooks run under the wallet lock, on the thread that moves the money. A
+`StoredWallet` entry is never removed on its own: call
+`ObolApi.get().balances().delete(id)` when its owner is gone for good.
 
-Either way the wallet is a first-class citizen: `/pay`-style transfers,
-displays and listeners work the same whatever the storage.
-
-## Showing coins on screen
-
-`CoinsDisplay` puts an amount on a player's screen as a HUD overlay, without
-the caller touching the server's UI system:
+### Showing coins
 
 ```java
 CoinsDisplay display = ObolApi.get().display();
 
-// Follows the player's balance, top right, until hide(): every deposit,
-// transfer or admin command is reflected, whoever made it.
-CoinsOverlay hud = display.track(playerId, ScreenPosition.topRight(20, 20),
-                                 new PlayerWallet(playerId), CoinsFormat.STANDARD);
+// Follows the wallet until hide() or disconnect, whoever moves the money.
+CoinsOverlay hud = display.track(viewer, ScreenPosition.topRight(20, 20),
+                                 new PlayerWallet(viewer), CoinsFormat.STANDARD);
 
-// Or a fixed amount (a price), changed by hand.
-CoinsOverlay price = display.show(playerId, ScreenPosition.bottomLeft(20, 80),
-                                  Coins.of(Denomination.GOLD, 2), CoinsFormat.STANDARD);
-price.update(Coins.of(Denomination.GOLD, 3));
-price.move(ScreenPosition.bottomRight(20, 80));
-price.hide();
+// A fixed amount (a price), changed by hand.
+CoinsOverlay tag = display.show(viewer, ScreenPosition.bottomLeft(20, 80),
+                                price, CoinsFormat.STANDARD);
+tag.update(Coins.of(Denomination.GOLD, 3));
+tag.move(ScreenPosition.bottomRight(20, 80));
+tag.hide();
 ```
 
-`ScreenPosition` is a corner plus offsets in pixels. The viewer must be
-connected and in a world (`IllegalArgumentException` otherwise). Only
-`CoinsFormat.STANDARD` has an on-screen template in this version: a pill
-showing each count next to its coin icon, the way fixed-base currencies are
-shown in games (`1g 5s 3c`): tiers above the largest one with coins are
-omitted, every tier below it is shown even at zero, and each count sits
-right-aligned in a column sized for two digits — `2 [gold] 5 [silver]
-4 [copper]` for `2g 5s 4c`, `1 [gold] 0 [silver] 5 [copper]` for `1g 5c`. The
-pill therefore only changes shape when the leading tier changes. The icons ship in Obol's asset pack; the client fetches them from
-the server like any other `Common/` asset.
+On screen an amount is a pill of counts and coin icons: tiers above the
+largest one holding coins are omitted, every tier below it is shown even at
+zero, and counts sit in fixed two-digit columns — `2 [gold] 5 [silver]
+4 [copper]` for `2g 5s 4c`, `1 [gold] 0 [silver] 5 [copper]` for `1g 5c`. A
+change of amount, from `update` or the tracked wallet, rolls the counts to the
+new value over about half a second, the ones that move tinted green (gain) or
+red (loss) until just after the roll settles; a change during a roll retargets
+it from the value on screen. The last frame is always the exact amount. A
+tracking overlay also lists the wallet's changes under the pill (over it, in
+a bottom corner): one row per change, newest first, at most five, each fully
+shown for 4 s then fading out over 1 s; nothing is merged, the oldest row
+goes when a sixth arrives. A fixed overlay has no feed.
 
-Overlays belong to the player's session: they vanish on disconnect and are
-not put back on reconnect. A plugin that wants a permanent overlay creates it
-again on the server's `PlayerReadyEvent`. Every `CoinsOverlay` method may be
-called from any thread.
+The coin images are part of the API, for pages of your own that show
+amounts: `Denomination.texture()` gives the path of each one relative to
+`Common/UI/Custom/` (`Obol/Gold.png`, a 48×48 PNG shipped by Obol), so a
+document of yours in `Common/UI/Custom/<YourMod>/` draws it with
+`Background: (TexturePath: "../Obol/Gold.png");` and `Denomination.color()`
+gives the matching text colour. Paths and sizes follow `obol-api`
+versioning, the drawings themselves may change. They are UI textures, not
+item icons: a mod giving coins a physical form needs its own item assets.
 
-## Listening to changes
+### Listening
 
 ```java
-ObolApi.get().addListener(event -> {
-    // event.wallet(), event.before(), event.after(), event.increased()
-});
+ObolApi.get().addListener(e -> log(e.wallet() + ": " + e.before() + " -> " + e.after()));
 ```
 
-Listeners run synchronously on the thread that moved the money, after the
-wallet lock was released, for every wallet whatever its storage, and never
-without a change. Keep them short; an exception is logged and does not reach
-the code that moved the money.
+### API reference
 
-## Commands and permissions
+Package `dev.galysso.obol.api`. No method accepts `null`
+(`NullPointerException`). `dev.galysso.obol.api.internal` is not API.
 
-| Command | Who | Effect |
-|---|---|---|
-| `/balance` | any player | Shows your balance. |
-| `/balance hud on\|off` | any player | Shows or hides your balance top right. The choice is remembered across sessions and restarts. |
-| `/pay <player> <amount>` | any player | Sends coins to an online player, e.g. `/pay Bob 2g 50s`. |
-| `/obol give <player> <amount>` | `obol.admin` | Adds coins. `<player>` is an online name or a UUID. |
-| `/obol take <player> <amount>` | `obol.admin` | Removes coins; refused if the balance cannot cover it. |
-| `/obol set <player> <amount>` | `obol.admin` | Sets the balance; zero is allowed. |
+**`ObolApi`** — `static get()` (`IllegalStateException` if Obol is not
+loaded: missing or misordered manifest dependency), `static find()` →
+`Optional`. `balances()`, `display()`, `addListener(l)` (twice = called
+twice), `removeListener(l)` → `boolean`.
 
-Amounts are written like `2g 35s 4c` (or `2g35s`, `250s`, a bare number in
-copper), tiers in any order, each at most once.
+**`Coins`** — immutable record over a non-negative `long copper()`,
+`Comparable`. `ZERO`, `ofCopper(long)`, `of(Denomination, long)`,
+`of(mythril, gold, silver, copper)`; `plus(c)`, `times(long)`
+(`ArithmeticException` on overflow), `minus(c)` → `Optional`, empty below
+zero; `isZero()`, `covers(c)`, `breakdown()` → `EnumMap<Denomination, Long>`,
+`amountOf(tier)`. `toString()` is `CoinsFormat.STANDARD`.
 
-Balances (and the HUD preference) live in the plugin's data directory,
-`mods/Galysso_obol/balances.json`, written every 30 seconds when something
-changed, on every player disconnect and at shutdown; the server keeps the
-previous version as `balances.json.bak`. A file Obol cannot read stops the
-plugin — and any plugin depending on it — rather than starting an empty
-economy.
+**`Denomination`** — `COPPER, SILVER, GOLD, MYTHRIL`, declared in ascending
+value. `valueInCopper()`, `symbol()` (`c s g m`), `color()` (`#RRGGBB`, the
+on-screen palette), `texture()` (`Obol/<Tier>.png` under `Common/UI/Custom/`,
+48×48), `static largest()`.
 
-## API compatibility
+**`CoinsFormat`** — `STANDARD` (`2g 35s 4c`, zero tiers omitted, `0c` for
+zero), `LONG` (`2 gold, 35 silver, 4 copper`); `id()`, `format(coins)`.
+`static parse(text)` reads every format's output plus `2g35s`, `250s`
+(= 2g 50s) and bare copper; case-insensitive, tiers in any order, each at most
+once; throws the checked `CoinsParseException` (`input()`).
 
-`api` is versioned independently of the implementation and follows semantic
-versioning. Within a major version:
+**`Wallet`** (abstract) — `id()`, `protected loadCopper()`,
+`protected saveCopper(long)`. Final: `balance()`, `canAfford(c)` (read-only
+hint; trust `withdraw` instead), `deposit(c)` → new balance, `withdraw(c)` →
+`boolean`, `transferTo(wallet, c)` → `boolean`. `withdraw` and `transferTo`
+return `false` and write nothing when the funds are short — **never ignore
+the result**. A transfer moves both balances or neither, including when the
+receiving `saveCopper` throws; to itself it writes nothing. Storage holding a
+negative value → `IllegalStateException`; overflow → `ArithmeticException`,
+nothing written. `equals`/`hashCode` are on `id()`.
 
-- interfaces in `dev.galysso.obol.api` gain methods only with a `default`
-  body;
-- `dev.galysso.obol.api.internal` is not API and may change at any time.
+**`StoredWallet`** (abstract) — a `Wallet` whose balance Obol stores and
+persists; only `id()` is left to write. **`PlayerWallet`** — `new
+PlayerWallet(UUID)`, `playerId()`, id `player:<uuid>`, `KIND = "player"`.
 
-## Development
+**`WalletId`** — record `(kind, key)`, both `[a-z0-9_-]+`
+(`IllegalArgumentException`); `kind` is your mod's namespace. `storageKey()` =
+`kind:key`, `static parse(storageKey)`.
 
-| Module | Gradle plugin | Role |
-|---|---|---|
-| `api` | `java-library` | Public API. Published standalone as `dev.galysso.obol:obol-api`. |
-| `core` | `com.azuredoom.hytale-tools` | Implementation, entry point, `manifest.json`. Ships one jar containing `api`. |
+**`BalanceStore`** (`ObolApi.balances()`) — Obol's own storage, for
+administration and migrations; day-to-day code goes through a `Wallet`.
+`balance(id)` (`ZERO` if unknown), `set(id, coins)` → previous balance (zero
+kept, not removed), `exists(id)`, `delete(id)` → `boolean`. `set` and
+`delete` take the wallet lock and publish an event when the balance changes.
+Calls are thread-safe individually; read-modify-write is not atomic here.
 
-The root project applies `com.azuredoom.hytale-workspace`, which orchestrates
-the workspace and propagates `hytaleVersion` / `patchline` / `manifestGroup`.
+**`CoinsDisplay`** (`ObolApi.display()`) — `show(viewer, position, coins,
+format)` and `track(viewer, position, wallet, format)` → `CoinsOverlay`. The
+viewer (`UUID`) must be connected and in a world, and the format must have an
+on-screen template — only `STANDARD` in this version — or
+`IllegalArgumentException`. Any number of overlays per player. `track`
+re-reads the wallet on every change, so it never shows a stale value, and
+lists the recent changes under the balance.
 
-### Why `api` has no Hytale dependency
+**`CoinsOverlay`** — `update(coins)` (ignored on a tracking overlay),
+`move(position)`, `hide()` (idempotent, releases a tracking listener),
+`isVisible()`. Bound to the viewer's session: gone on disconnect, not
+recreated on reconnect (put it back on the server's `PlayerReadyEvent`), after
+which the handle is dead and `isVisible()` stays `false`. Every method may be
+called from any thread; changes reach the client in call order.
 
-`api` compiles against the JDK alone — a player is a `UUID`, an amount is a
-record, events are plain records, and subscription goes through
-`CoinsListener` rather than the server event bus. Two consequences:
+**`ScreenPosition`** — record `(Corner, offsetX, offsetY)` in UI pixels, never
+negative; `topLeft`, `topRight`, `bottomLeft`, `bottomRight(x, y)`. `Corner`:
+`isRight()`, `isBottom()`.
 
-- The API does not break when a Hytale server upgrade changes a signature,
-  and consumers do not inherit compile-time coupling to a server version.
-- Anything that genuinely needs a server type (the HUD, entity components)
-  belongs in `core`, behind an API-level abstraction — that is how
-  `CoinsDisplay` is implemented.
+**`CoinsListener`** — `onCoinsChanged(CoinsChangedEvent)`.
+**`event.CoinsChangedEvent`** — record `(wallet: WalletId, before, after)`,
+`increased()`; `before` and `after` always differ. Published for every
+accepted write on every kind of wallet (a transfer gives two: debit, then
+credit), synchronously on the thread that moved the money, after the lock was
+released, in subscription order. A listener that throws is logged and skipped;
+the others still run and the caller never sees it. The event is a snapshot:
+read `wallet.balance()` when the current value matters.
 
-It is also why the money rules are unit-tested: `Coins`, `CoinsFormat` and
-`Wallet` run under JUnit with an in-memory runtime, no server in the loop;
-`core` does the same for everything JDK-pure (locks, store, persistence,
-overlay logic behind a fake screen).
+### Guarantees
 
-The Hytale server jar is injected on `compileOnly` by `hytale-tools`, which is
-only applied to `core`. `core`'s `jar` task copies `api`'s class output
-explicitly: `hytale-tools` does not shade `project()` dependencies, so without
-it the shipped plugin would be missing every API class at runtime.
+Every operation runs under a lock Obol keeps per `WalletId`, so concurrent
+callers never see a torn read-modify-write, and transfers lock in a global
+order and cannot deadlock. Wallets carry no state: nothing is cached, nothing
+to register or look up.
 
-### Building and running
+`obol-api` follows semantic versioning independently of the plugin. Within a
+major version, interfaces gain methods only with a `default` body.
 
-Requires **JDK 25** — the Hytale Gradle plugin itself runs on it, so the
-Gradle daemon must too, not just the compiler.
-`gradle/gradle-daemon-jvm.properties` pins that requirement and Gradle
-provisions a JDK 25 on first run, so a system JDK 21 on `PATH` is fine and
-CI needs no setup step.
+## Building
+
+Two modules: `api` (`java-library`, JDK-only, published as
+`dev.galysso.obol:obol-api`) and `core` (`com.azuredoom.hytale-tools`: the
+plugin, `manifest.json`, one jar that also contains `api`). `core/src/main/
+resources` is the asset pack (`Common/UI/Custom/Obol/<Tier>.{ui,png}`; the
+64×64 originals are in `tmp/`). Identity and versions live in
+`gradle.properties`; `manifest.json` is generated from it.
+
+Requires **JDK 25** for the Gradle daemon itself; Gradle provisions it on
+first run (`gradle/gradle-daemon-jvm.properties`).
 
 ```bash
-./gradlew setupHytaleDev      # first-time setup (fetches assets, prepares IDE sources)
-./gradlew build               # compiles both modules, runs the tests, produces core/build/libs/Obol-<version>.jar
-./gradlew runServer           # local dev server in core/run/
-./gradlew updateAllPluginManifests   # regenerate core/src/main/resources/manifest.json
+./gradlew setupHytaleDev      # once: fetches the game's assets (OAuth device flow, or set
+                              #   hytaleHomeOverride=/path/to/Assets.zip in ~/.gradle/gradle.properties)
+./gradlew build               # tests + core/build/libs/Obol-<version>.jar
+./gradlew runServer           # dev server in core/run/, reading the asset pack live
+./gradlew updateAllPluginManifests
 ```
 
-Hot-swap debugging wants a JetBrains Runtime specifically:
-
-```bash
-JAVA_HOME=~/.local/share/JetBrains/Toolbox/apps/intellij-idea/jbr \
-  ./gradlew runServer -Ddebug=true -Dhotswap=true
-```
-
-Identity and versions live in `gradle.properties`; `manifest.json` is
-generated from it, so edit the properties rather than the manifest.
-
-### Hytale assets
-
-`setupHytaleDev` needs the game's `Assets.zip`. By default it runs an OAuth
-**device flow**: it prints a URL and a code and blocks until you approve them
-in a browser, then times out. Two ways through it:
-
-- approve it — run the task in an interactive terminal, open the printed URL,
-  sign in with the Hytale account that owns the game;
-- skip it — point the build at an existing installation. Put the path in
-  `~/.gradle/gradle.properties` (never in the repo, it is machine-specific):
-
-  ```properties
-  hytaleHomeOverride = /path/to/Hytale/install/release/package/game/latest/Assets.zip
-  ```
-
-  With the Flatpak launcher that path is under
-  `~/.var/app/com.hypixel.HytaleLauncher/data/Hytale/install/...`.
-
-### Asset pack
-
-`core/src/main/resources` is also the plugin's asset pack (`includes_pack =
-true`, `IncludesAssetPack` in the manifest): it is laid out like the game's
-`Assets.zip`, so the HUD documents and coin images live in
-`Common/UI/Custom/Obol/`. Each tier has a `<Tier>.ui` and a `<Tier>.png`,
-named after `Denomination`; the HUD appends one document per non-zero tier
-into an inline root, which is how the image path stays relative to a real
-file. Image paths in a `.ui` resolve relative to that file. The originals
-(64×64 pixel art, plus a 256px mod icon in `docs/`) are in `tmp/`; the shipped
-copies are cropped to 48×48 so that the 24px on-screen box is an exact 2:1
-downscale.
-
-### Dev server caveat
-
-`hytale-tools` links `core/run/mods/Galysso_obol` to `core/src/main/resources`,
-so the dev server reads the pack live, and its `balances.json` lands in the
-sources. That file is excluded from the jar and git-ignored; delete it to
-reset the dev economy.
-
-### Smoke test in game
-
-Give yourself `obol.admin` (`core/run/permissions.json`,
-`users.<uuid>.groups = ["hytale:Admin"]`), then `/obol give <you> 2g`,
-`/balance`, restart the server, `/balance` again. `/balance hud on` then
-`/obol give` should update the overlay without any further command; `/pay`
-between two clients checks transfers.
+The dev server links `core/run/mods/Galysso_obol` to
+`core/src/main/resources`, so its `balances.json` lands in the sources
+(git-ignored, excluded from the jar; delete it to reset). Smoke test: give
+yourself `obol.admin` (`core/run/permissions.json`,
+`users.<uuid>.groups = ["hytale:Admin"]`), `/obol give <you> 2g`: the HUD
+updates at once; restart: it comes back with the same amount.
