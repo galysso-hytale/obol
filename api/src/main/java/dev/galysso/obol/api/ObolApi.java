@@ -21,6 +21,14 @@ import java.util.Optional;
 public interface ObolApi {
 
     /**
+     * {@return the storage Obol provides for {@link StoredWallet}s}
+     *
+     * <p>Meant for administration and migrations; regular code reads and
+     * moves money through a {@link Wallet}.</p>
+     */
+    BalanceStore balances();
+
+    /**
      * {@return the running API instance}
      *
      * @throws IllegalStateException if Obol is not loaded, which means a

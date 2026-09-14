@@ -15,7 +15,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class ObolApiHolder {
 
-    private static final AtomicReference<ObolApi> INSTANCE = new AtomicReference<>();
+    private record Installed(ObolApi api, ObolRuntime runtime) {
+    }
+
+    private static final AtomicReference<Installed> INSTANCE = new AtomicReference<>();
 
     private ObolApiHolder() {
     }
@@ -23,11 +26,15 @@ public final class ObolApiHolder {
     /**
      * Publishes the implementation. Called once by Obol itself.
      *
-     * @param api the implementation
+     * <p>The single object serves both faces: the public {@link ObolApi} and
+     * the {@link ObolRuntime} that {@code Wallet} relies on.</p>
+     *
+     * @param <T>  the implementation type
+     * @param impl the implementation
      * @throws IllegalStateException if an instance is already installed
      */
-    public static void install(ObolApi api) {
-        if (!INSTANCE.compareAndSet(null, api)) {
+    public static <T extends ObolApi & ObolRuntime> void install(T impl) {
+        if (!INSTANCE.compareAndSet(null, new Installed(impl, impl))) {
             throw new IllegalStateException("Obol API is already installed");
         }
     }
@@ -45,19 +52,32 @@ public final class ObolApiHolder {
      * @throws IllegalStateException if none is installed
      */
     public static ObolApi require() {
-        ObolApi api = INSTANCE.get();
-        if (api == null) {
-            throw new IllegalStateException(
-                    "Obol is not loaded. Declare \"Galysso:obol\" "
-                            + "in your manifest Dependencies.");
-        }
-        return api;
+        return installed().api();
+    }
+
+    /**
+     * {@return the runtime side of the installed implementation}
+     *
+     * @throws IllegalStateException if none is installed
+     */
+    public static ObolRuntime runtime() {
+        return installed().runtime();
     }
 
     /**
      * {@return the installed implementation, or empty if none is installed}
      */
     public static Optional<ObolApi> find() {
-        return Optional.ofNullable(INSTANCE.get());
+        return Optional.ofNullable(INSTANCE.get()).map(Installed::api);
+    }
+
+    private static Installed installed() {
+        Installed installed = INSTANCE.get();
+        if (installed == null) {
+            throw new IllegalStateException(
+                    "Obol is not loaded. Declare \"Galysso:obol\" "
+                            + "in your manifest Dependencies.");
+        }
+        return installed;
     }
 }
