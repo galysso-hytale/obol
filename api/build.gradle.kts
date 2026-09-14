@@ -22,6 +22,16 @@ repositories {
     mavenCentral()
 }
 
+// The reason this module exists without Hytale: value types and wallet rules
+// are unit-tested here, with no server in the loop.
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter("5.13.4")
+        }
+    }
+}
+
 tasks.withType<Javadoc>().configureEach {
     (options as org.gradle.external.javadoc.StandardJavadocDocletOptions).apply {
         addStringOption("Xdoclint:all,-missing", "-quiet")
