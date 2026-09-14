@@ -142,10 +142,13 @@ price.hide();
 `ScreenPosition` is a corner plus offsets in pixels. The viewer must be
 connected and in a world (`IllegalArgumentException` otherwise). Only
 `CoinsFormat.STANDARD` has an on-screen template in this version: a pill
-showing, from the largest tier down, each count next to its coin icon
-(`2 [gold] 35 [silver] 4 [copper]` for `2g 35s 4c`, empty tiers omitted).
-The icons ship in Obol's asset pack, the client fetches them from the server
-like any other `Common/` asset.
+showing each count next to its coin icon, the way fixed-base currencies are
+shown in games (`1g 5s 3c`): tiers above the largest one with coins are
+omitted, every tier below it is shown even at zero, and each count sits
+right-aligned in a column sized for two digits — `2 [gold] 5 [silver]
+4 [copper]` for `2g 5s 4c`, `1 [gold] 0 [silver] 5 [copper]` for `1g 5c`. The
+pill therefore only changes shape when the leading tier changes. The icons ship in Obol's asset pack; the client fetches them from
+the server like any other `Common/` asset.
 
 Overlays belong to the player's session: they vanish on disconnect and are
 not put back on reconnect. A plugin that wants a permanent overlay creates it

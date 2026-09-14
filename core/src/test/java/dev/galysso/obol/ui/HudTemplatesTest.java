@@ -51,12 +51,17 @@ class HudTemplatesTest {
     }
 
     @Test
-    void tiersFollowTheTextFormat() {
+    void tiersRunFromTheLeadingOneDownToCopper() {
         assertEquals(List.of(tier(Denomination.COPPER, 0)), HudTemplates.tiers(Coins.ZERO));
         assertEquals(List.of(tier(Denomination.SILVER, 2), tier(Denomination.COPPER, 50)),
                 HudTemplates.tiers(Coins.ofCopper(250)));
-        assertEquals(List.of(tier(Denomination.MYTHRIL, 120), tier(Denomination.GOLD, 3)),
+        // Zero sub-units stay, so the pill keeps its shape; zero higher tiers go.
+        assertEquals(List.of(tier(Denomination.MYTHRIL, 120), tier(Denomination.GOLD, 3),
+                        tier(Denomination.SILVER, 0), tier(Denomination.COPPER, 0)),
                 HudTemplates.tiers(Coins.of(120, 3, 0, 0)));
+        assertEquals(List.of(tier(Denomination.GOLD, 1), tier(Denomination.SILVER, 0),
+                        tier(Denomination.COPPER, 5)),
+                HudTemplates.tiers(Coins.of(0, 1, 0, 5)));
     }
 
     @Test
@@ -65,6 +70,13 @@ class HudTemplatesTest {
         assertEquals("Obol/Gold.ui", gold.document());
         assertEquals("#Gold #Count.Text", gold.countSelector());
         assertEquals("35", gold.countText());
+    }
+
+    @Test
+    void countsAreNeverZeroPadded() {
+        assertEquals("5", tier(Denomination.SILVER, 5).countText());
+        assertEquals("0", tier(Denomination.COPPER, 0).countText());
+        assertEquals("120", tier(Denomination.MYTHRIL, 120).countText());
     }
 
     /**
@@ -84,6 +96,9 @@ class HudTemplatesTest {
         }
         assertTrue(document.contains("Group #" + tier.name() + " {"), "root id");
         assertTrue(document.contains("Label #Count {"), "count label");
+        assertTrue(document.contains("HorizontalAlignment: End"), "right-aligned in its column");
+        assertTrue(document.contains(denomination == Denomination.largest()
+                ? "Anchor: (MinWidth: " : "Anchor: (Width: "), "column sized for two digits");
         assertTrue(document.contains("Background: \"" + tier.name() + ".png\";"), "image next to the count");
         assertTrue(document.contains("TextColor: " + denomination.color()), "palette from Denomination");
         try (InputStream in = HudTemplatesTest.class.getResourceAsStream(base + ".png")) {

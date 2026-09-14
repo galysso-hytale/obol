@@ -88,20 +88,19 @@ public final class HudTemplates {
     /**
      * {@return the tiers to append into the pill, largest first}
      *
-     * <p>Tiers with no coins are left out, except that zero shows as the
-     * copper tier alone, like {@link CoinsFormat#format}.</p>
+     * <p>The convention of fixed-base currencies (gold/silver/copper, or
+     * {@code 2.05}): tiers above the largest one that has coins are left out,
+     * every tier below it is shown even at zero, so that the pill only
+     * changes shape when the leading tier changes. Zero is the copper tier
+     * alone.</p>
      */
     public static List<Tier> tiers(Coins coins) {
         List<Tier> tiers = new ArrayList<>();
-        if (coins.isZero()) {
-            tiers.add(new Tier(Denomination.COPPER, 0));
-            return tiers;
-        }
         EnumMap<Denomination, Long> parts = coins.breakdown();
         Denomination[] all = Denomination.values();
         for (int i = all.length - 1; i >= 0; i--) {
             long count = parts.get(all[i]);
-            if (count != 0) {
+            if (count != 0 || !tiers.isEmpty() || i == 0) {
                 tiers.add(new Tier(all[i], count));
             }
         }
@@ -143,7 +142,13 @@ public final class HudTemplates {
             return "#" + name() + " #Count.Text";
         }
 
-        /** {@return the count as the label shows it} */
+        /**
+         * {@return the count as the label shows it}
+         *
+         * <p>Plain digits, no zero padding: the fixed-width column of the
+         * label keeps the icons in place, the way game currencies are shown
+         * ({@code 1g 5s 3c}, not {@code 1g 05s 03c}).</p>
+         */
         public String countText() {
             return Long.toString(count);
         }
