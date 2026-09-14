@@ -12,15 +12,18 @@ import dev.galysso.obol.api.PlayerWallet;
 import java.util.UUID;
 
 /**
- * {@code /obol give|take|set <player> <amount>}: administration.
+ * {@code /obol give|take|set <player> <amount>} and
+ * {@code /obol transfer <from> <to> <amount>}: administration, the only
+ * commands Obol has. Players see their balance on the HUD and move money
+ * through the mods built on Obol (shops, trades), not by hand.
  *
- * <p>One permission node, {@code obol.admin}, for the root and the three
+ * <p>One permission node, {@code obol.admin}, for the root and the
  * sub-commands; without an explicit {@code requirePermission} the server
  * would generate one node per sub-command. The node is granted to the
  * {@code hytale:Admin} group by default; other groups are configured in
  * {@code permissions.json}.</p>
  *
- * <p>The player is a {@code PLAYER_UUID}: the name of an online player, or a
+ * <p>Players are {@code PLAYER_UUID}s: the name of an online player, or a
  * raw UUID for someone offline — the store does not need them connected.</p>
  */
 public final class ObolCommand extends CommandBase {
@@ -34,6 +37,7 @@ public final class ObolCommand extends CommandBase {
         addSubCommand(new Give());
         addSubCommand(new Take());
         addSubCommand(new Set());
+        addSubCommand(new Transfer());
     }
 
     @Override
@@ -42,7 +46,7 @@ public final class ObolCommand extends CommandBase {
     }
 
     /**
-     * Shared shape of the three sub-commands: a player and an amount.
+     * Shared shape of give, take and set: a player and an amount.
      */
     private abstract static class Sub extends CommandBase {
 
@@ -124,6 +128,43 @@ public final class ObolCommand extends CommandBase {
             Commands.tell(target, "Your balance was set to " + Commands.format(amount) + ".");
             return "Set " + Commands.name(target) + "'s balance to " + Commands.format(amount)
                     + " (was " + Commands.format(previous) + ").";
+        }
+    }
+
+    private static final class Transfer extends CommandBase {
+
+        private final RequiredArg<UUID> from;
+        private final RequiredArg<UUID> to;
+        private final RequiredArg<String> amount;
+
+        Transfer() {
+            super("transfer", "Moves coins from one player to another.");
+            from = withRequiredArg("from", "Paying player: online name, or a UUID.", ArgTypes.PLAYER_UUID);
+            to = withRequiredArg("to", "Receiving player: online name, or a UUID.", ArgTypes.PLAYER_UUID);
+            amount = withRequiredArg("amount", "Amount, e.g. 2g 50s.", ArgTypes.GREEDY_STRING);
+            requirePermission(PERMISSION);
+        }
+
+        @Override
+        protected void executeSync(CommandContext context) {
+            UUID source = from.get(context);
+            UUID dest = to.get(context);
+            Coins coins = Commands.positiveAmount(amount.get(context));
+            if (source.equals(dest)) {
+                throw Commands.error("The two players must differ.");
+            }
+            PlayerWallet payer = new PlayerWallet(source);
+            PlayerWallet payee = new PlayerWallet(dest);
+            if (!payer.transferTo(payee, coins)) {
+                throw Commands.error("Insufficient funds: " + Commands.name(source) + " has "
+                        + Commands.format(payer.balance()) + ".");
+            }
+            Commands.tell(source, Commands.format(coins) + " was sent to " + Commands.name(dest)
+                    + ". Balance: " + Commands.format(payer.balance()));
+            Commands.tell(dest, "You received " + Commands.format(coins) + " from " + Commands.name(source)
+                    + ". Balance: " + Commands.format(payee.balance()));
+            context.sendMessage(Message.raw("Moved " + Commands.format(coins) + " from " + Commands.name(source)
+                    + " to " + Commands.name(dest) + "."));
         }
     }
 }

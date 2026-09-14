@@ -5,10 +5,7 @@ import dev.galysso.obol.api.WalletId;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -20,31 +17,28 @@ class BalancesPersistenceTest {
     /** In-memory stand-in for balances.json. */
     private static final class MemoryBackend implements BalancesBackend {
         Map<String, Long> disk = new HashMap<>();
-        Set<UUID> hudsOnDisk = new HashSet<>();
         int saves;
         boolean failNextSave;
 
         @Override
-        public Snapshot load() {
-            return new Snapshot(new HashMap<>(disk), new HashSet<>(hudsOnDisk));
+        public Map<String, Long> load() {
+            return new HashMap<>(disk);
         }
 
         @Override
-        public void save(Snapshot snapshot) {
+        public void save(Map<String, Long> balances) {
             if (failNextSave) {
                 failNextSave = false;
                 throw new IllegalStateException("disk full");
             }
             saves++;
-            disk = new HashMap<>(snapshot.balances());
-            hudsOnDisk = new HashSet<>(snapshot.hudEnabled());
+            disk = new HashMap<>(balances);
         }
     }
 
     private final BalanceStoreImpl store = new BalanceStoreImpl();
-    private final HudPreferences huds = new HudPreferences();
     private final MemoryBackend backend = new MemoryBackend();
-    private final BalancesPersistence persistence = new BalancesPersistence(store, huds, backend);
+    private final BalancesPersistence persistence = new BalancesPersistence(store, backend);
     private final WalletId alice = new WalletId("player", "alice");
     private final WalletId bob = new WalletId("player", "bob");
 
@@ -117,36 +111,9 @@ class BalancesPersistenceTest {
         persistence.save();
 
         BalanceStoreImpl reloaded = new BalanceStoreImpl();
-        new BalancesPersistence(reloaded, new HudPreferences(), backend).load();
+        new BalancesPersistence(reloaded, backend).load();
 
         assertTrue(reloaded.exists(alice));
         assertEquals(Coins.ZERO, reloaded.balance(alice));
-    }
-
-    @Test
-    void hudPreferencesTravelWithTheBalances() {
-        UUID player = UUID.randomUUID();
-        assertFalse(persistence.saveIfDirty());
-
-        assertTrue(huds.set(player, true));
-        assertTrue(persistence.saveIfDirty(), "a HUD change alone dirties the file");
-        assertEquals(Set.of(player), backend.hudsOnDisk);
-        assertFalse(persistence.saveIfDirty());
-
-        HudPreferences reloaded = new HudPreferences();
-        new BalancesPersistence(new BalanceStoreImpl(), reloaded, backend).load();
-        assertTrue(reloaded.isEnabled(player));
-        assertFalse(reloaded.isDirty());
-    }
-
-    @Test
-    void aFailedSaveLeavesTheHudPreferencesDirtyToo() {
-        huds.set(UUID.randomUUID(), true);
-        backend.failNextSave = true;
-
-        assertThrows(IllegalStateException.class, persistence::saveIfDirty);
-
-        assertTrue(huds.isDirty());
-        assertTrue(persistence.saveIfDirty());
     }
 }

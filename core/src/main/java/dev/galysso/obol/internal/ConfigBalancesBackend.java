@@ -3,7 +3,7 @@ package dev.galysso.obol.internal;
 import com.hypixel.hytale.server.core.util.Config;
 
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -29,16 +29,13 @@ public final class ConfigBalancesBackend implements BalancesBackend {
      * the server's loader.</p>
      */
     @Override
-    public Snapshot load() {
-        BalancesState state = config.load().join();
-        return new Snapshot(new HashMap<>(state.balances), new HashSet<>(state.hudEnabled));
+    public Map<String, Long> load() {
+        return new HashMap<>(config.load().join().balances);
     }
 
     @Override
-    public void save(Snapshot snapshot) {
-        BalancesState state = config.get();
-        state.balances = new HashMap<>(snapshot.balances());
-        state.hudEnabled = new HashSet<>(snapshot.hudEnabled());
+    public void save(Map<String, Long> balances) {
+        config.get().balances = new HashMap<>(balances);
         config.save().join();
     }
 }

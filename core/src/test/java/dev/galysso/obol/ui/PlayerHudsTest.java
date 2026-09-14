@@ -6,7 +6,6 @@ import dev.galysso.obol.api.CoinsFormat;
 import dev.galysso.obol.api.CoinsOverlay;
 import dev.galysso.obol.api.ScreenPosition;
 import dev.galysso.obol.api.Wallet;
-import dev.galysso.obol.internal.HudPreferences;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -16,7 +15,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,51 +64,35 @@ class PlayerHudsTest {
     }
 
     private final FakeDisplay display = new FakeDisplay();
-    private final HudPreferences preferences = new HudPreferences();
-    private final PlayerHuds huds = new PlayerHuds(display, preferences);
+    private final PlayerHuds huds = new PlayerHuds(display);
     private final UUID player = UUID.randomUUID();
 
     @Test
-    void enableShowsOnceAndRemembers() {
+    void theHudGoesUpOnReadyAndOnlyOncePerSession() {
         display.online.add(player);
 
-        assertTrue(huds.enable(player));
-        assertFalse(huds.enable(player), "already on, and not shown twice");
-        assertTrue(huds.isEnabled(player));
-        assertTrue(preferences.isEnabled(player));
+        huds.onReady(player);
+        huds.onReady(player);   // a world change: the overlay is still there
+
         assertEquals(List.of("track player:" + player + " at Top: 20, Right: 20"), display.calls);
     }
 
     @Test
-    void disableHidesAndForgets() {
-        display.online.add(player);
-        huds.enable(player);
-
-        assertTrue(huds.disable(player));
-        assertFalse(huds.disable(player));
-        assertFalse(preferences.isEnabled(player));
-        assertEquals("hide", display.calls.get(display.calls.size() - 1));
-    }
-
-    @Test
-    void theHudComesBackOnReadyOnlyForThoseWhoWantIt() {
-        huds.onReady(player);
-        assertTrue(display.calls.isEmpty());
-
-        preferences.set(player, true);
+    void aNewSessionGetsANewOverlay() {
         display.online.add(player);
         huds.onReady(player);
-        assertEquals(1, display.calls.size());
 
-        // A new session: the display dropped the old overlay.
+        // The display dropped the old overlay with the session.
         huds.onDisconnect(player);
         huds.onReady(player);
+
         assertEquals(2, display.calls.size());
+        assertTrue(display.calls.stream().allMatch(c -> c.startsWith("track")));
     }
 
     @Test
-    void enablingWhileNotInAWorldIsRefusedButRemembered() {
-        assertThrows(IllegalArgumentException.class, () -> huds.enable(player));
-        assertTrue(preferences.isEnabled(player), "the choice is kept for the next ready");
+    void readyBeforeTheDisplaySeesThePlayerIsReported() {
+        assertThrows(IllegalArgumentException.class, () -> huds.onReady(player));
+        assertTrue(display.calls.isEmpty());
     }
 }

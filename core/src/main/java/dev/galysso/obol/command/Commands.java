@@ -11,7 +11,7 @@ import dev.galysso.obol.api.CoinsParseException;
 import java.util.UUID;
 
 /**
- * What the three commands share: amount parsing, naming a player who may be
+ * What the sub-commands share: amount parsing, naming a player who may be
  * offline, and message wording.
  *
  * <p>Commands go through the public API only ({@code PlayerWallet},

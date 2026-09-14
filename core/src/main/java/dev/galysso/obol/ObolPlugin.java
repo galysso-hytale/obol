@@ -10,13 +10,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
 import dev.galysso.obol.api.internal.ObolApiHolder;
-import dev.galysso.obol.command.BalanceCommand;
 import dev.galysso.obol.command.ObolCommand;
-import dev.galysso.obol.command.PayCommand;
 import dev.galysso.obol.internal.BalancesPersistence;
 import dev.galysso.obol.internal.BalancesState;
 import dev.galysso.obol.internal.ConfigBalancesBackend;
-import dev.galysso.obol.internal.HudPreferences;
 import dev.galysso.obol.internal.ObolApiImpl;
 import dev.galysso.obol.ui.PlayerHuds;
 import dev.galysso.obol.ui.ServerHuds;
@@ -49,10 +46,8 @@ public class ObolPlugin extends JavaPlugin {
         // withConfig() is only allowed before setup(): the server refuses it
         // once the plugin state has moved on.
         balancesFile = withConfig("balances", BalancesState.CODEC);
-        HudPreferences hudPreferences = new HudPreferences();
-        persistence = new BalancesPersistence(
-                api.storedBalances(), hudPreferences, new ConfigBalancesBackend(balancesFile));
-        playerHuds = new PlayerHuds(api.display(), hudPreferences);
+        persistence = new BalancesPersistence(api.storedBalances(), new ConfigBalancesBackend(balancesFile));
+        playerHuds = new PlayerHuds(api.display());
         // Published from the constructor, not setup(): dependent plugins may
         // already be resolving the API by the time our own setup() runs.
         ObolApiHolder.install(api);
@@ -74,8 +69,6 @@ public class ObolPlugin extends JavaPlugin {
         this.loaded = true;
         getLogger().atInfo().log("Loaded %d balance(s)", count);
 
-        getCommandRegistry().registerCommand(new BalanceCommand(playerHuds));
-        getCommandRegistry().registerCommand(new PayCommand());
         getCommandRegistry().registerCommand(new ObolCommand());
 
         // Keyed event (String): the global registration sees every player.
