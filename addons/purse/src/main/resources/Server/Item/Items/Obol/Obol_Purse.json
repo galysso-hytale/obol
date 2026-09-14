@@ -1,0 +1,53 @@
+{
+  "$Comment": "Genere par tmp/purse.py, ne pas editer a la main.",
+  "TranslationProperties": {
+    "Name": "server.items.Obol_Purse.name",
+    "Description": "server.items.Obol_Purse.description"
+  },
+  "Categories": [
+    "Items.Tools"
+  ],
+  "Icon": "Icons/ItemsGenerated/Obol_Purse.png",
+  "Model": "Items/Obol/Purse.blockymodel",
+  "Texture": "Items/Obol/Purse_Texture.png",
+  "Scale": 0.8,
+  "Quality": "Common",
+  "ItemLevel": 5,
+  "MaxStack": 10,
+  "PlayerAnimationsId": "Item",
+  "IconProperties": {
+    "Scale": 0.6,
+    "Rotation": [
+      22.5,
+      30.0,
+      10.0
+    ],
+    "Translation": [
+      0.0,
+      -15.0
+    ]
+  },
+  "Recipe": {
+    "Input": [
+      {
+        "ItemId": "Ingredient_Leather_Light",
+        "Quantity": 2
+      },
+      {
+        "ItemId": "Ingredient_Fabric_Scrap_Wool",
+        "Quantity": 1
+      }
+    ],
+    "BenchRequirement": []
+  },
+  "Tags": {
+    "Type": [
+      "Utility"
+    ],
+    "Family": [
+      "Leather"
+    ]
+  },
+  "ItemSoundSetId": "ISS_Items_Leather",
+  "DropOnDeath": true
+}
