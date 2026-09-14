@@ -1,5 +1,7 @@
 package dev.galysso.obol.api;
 
+import dev.galysso.obol.api.internal.ObolApiHolder;
+
 /**
  * A {@link Wallet} whose balance lives in Obol's own balance store.
  *
@@ -23,7 +25,11 @@ public abstract class StoredWallet extends Wallet {
         balances().set(id(), Coins.ofCopper(copper));
     }
 
+    /**
+     * The raw store, not the public {@link ObolApi#balances()}: the lock is
+     * already held and {@link Wallet} publishes the event itself.
+     */
     private static BalanceStore balances() {
-        return ObolApi.get().balances();
+        return ObolApiHolder.runtime().storedBalances();
     }
 }

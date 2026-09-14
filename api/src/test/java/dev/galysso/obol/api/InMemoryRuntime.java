@@ -66,8 +66,20 @@ final class InMemoryRuntime implements ObolApi, ObolRuntime {
         }
     }
 
+    /** No screen here: the display is core's, behind a server. */
+    @Override
+    public CoinsDisplay display() {
+        throw new UnsupportedOperationException("no display in the in-memory runtime");
+    }
+
+    /** The same raw store on both faces: the guarded one is core's. */
     @Override
     public BalanceStore balances() {
+        return storedBalances();
+    }
+
+    @Override
+    public BalanceStore storedBalances() {
         return new BalanceStore() {
             @Override
             public Coins balance(WalletId id) {

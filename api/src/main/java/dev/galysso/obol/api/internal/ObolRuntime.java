@@ -1,5 +1,6 @@
 package dev.galysso.obol.api.internal;
 
+import dev.galysso.obol.api.BalanceStore;
 import dev.galysso.obol.api.WalletId;
 import dev.galysso.obol.api.event.CoinsChangedEvent;
 
@@ -36,4 +37,15 @@ public interface ObolRuntime {
      * @param event the change to report
      */
     void publish(CoinsChangedEvent event);
+
+    /**
+     * {@return the store behind {@link dev.galysso.obol.api.StoredWallet},
+     * without lock or event}
+     *
+     * <p>The public {@link dev.galysso.obol.api.ObolApi#balances()} takes the
+     * wallet lock and publishes; a {@code StoredWallet} must not go through
+     * it, since {@code Wallet} already holds the lock and reports the write
+     * itself.</p>
+     */
+    BalanceStore storedBalances();
 }

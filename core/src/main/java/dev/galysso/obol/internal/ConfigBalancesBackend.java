@@ -3,7 +3,7 @@ package dev.galysso.obol.internal;
 import com.hypixel.hytale.server.core.util.Config;
 
 import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Objects;
 
 /**
@@ -11,10 +11,6 @@ import java.util.Objects;
  * {@code balances.json} in the plugin's data directory, written atomically
  * (temp file, then move, previous copy kept as {@code .bak}) by the server
  * itself.
- *
- * <p>Only the {@code Balances} field is ours to touch: the state object the
- * config holds is mutated in place and saved whole, so any other field
- * survives a save untouched.</p>
  */
 public final class ConfigBalancesBackend implements BalancesBackend {
 
@@ -33,14 +29,16 @@ public final class ConfigBalancesBackend implements BalancesBackend {
      * the server's loader.</p>
      */
     @Override
-    public Map<String, Long> load() {
+    public Snapshot load() {
         BalancesState state = config.load().join();
-        return new HashMap<>(state.balances);
+        return new Snapshot(new HashMap<>(state.balances), new HashSet<>(state.hudEnabled));
     }
 
     @Override
-    public void save(Map<String, Long> balances) {
-        config.get().balances = new HashMap<>(balances);
+    public void save(Snapshot snapshot) {
+        BalancesState state = config.get();
+        state.balances = new HashMap<>(snapshot.balances());
+        state.hudEnabled = new HashSet<>(snapshot.hudEnabled());
         config.save().join();
     }
 }

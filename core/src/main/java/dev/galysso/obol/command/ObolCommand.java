@@ -118,8 +118,8 @@ public final class ObolCommand extends CommandBase {
         @Override
         String apply(UUID target, String amountText) {
             Coins amount = Commands.amount(amountText);
-            // Straight to the store: bypasses the wallet lock and listeners,
-            // which is the documented contract of BalanceStore.set.
+            // The store takes the wallet lock and publishes the change, so a
+            // HUD tracking the player sees the new balance at once.
             Coins previous = ObolApi.get().balances().set(new PlayerWallet(target).id(), amount);
             Commands.tell(target, "Your balance was set to " + Commands.format(amount) + ".");
             return "Set " + Commands.name(target) + "'s balance to " + Commands.format(amount)

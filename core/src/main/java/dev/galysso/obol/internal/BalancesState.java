@@ -18,10 +18,10 @@ import java.util.UUID;
  *
  * <p>A mutable bag of fields, as {@link BuilderCodec} wants: the server
  * instantiates it through {@link #BalancesState()} and fills it setter by
- * setter. {@code HudEnabled} is written from the first version so that the
- * HUD preference (step 8) does not change the file format. The file carries
- * a {@code Version} (1) so that a future format change can be migrated; a
- * file from a newer Obol is refused by the server, not misread.</p>
+ * setter. The HUD preference lives in the same file as the balances, under
+ * its own key, rather than in a second file. The file carries a
+ * {@code Version} (1) so that a future format change can be migrated; a file
+ * from a newer Obol is refused by the server, not misread.</p>
  */
 public final class BalancesState {
 
@@ -43,7 +43,7 @@ public final class BalancesState {
     /** Keyed by {@code WalletId.storageKey()}, values in copper. */
     Map<String, Long> balances = new HashMap<>();
 
-    /** Players who turned the coins HUD on. Unused until step 8. */
+    /** Players who turned the coins HUD on. */
     Set<UUID> hudEnabled = new HashSet<>();
 
     public BalancesState() {

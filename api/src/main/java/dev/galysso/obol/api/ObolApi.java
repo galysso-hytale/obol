@@ -29,6 +29,11 @@ public interface ObolApi {
     BalanceStore balances();
 
     /**
+     * {@return the on-screen display of coins}
+     */
+    CoinsDisplay display();
+
+    /**
      * Subscribes to balance changes of every wallet, whatever its storage.
      *
      * <p>Listeners run synchronously on the thread that moved the money,
