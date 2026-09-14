@@ -110,6 +110,8 @@ class Box:
 
 
 FACES = ("front", "back", "right", "left", "top", "bottom")
+# Materiaux dont toutes les boites partagent leurs regions de texture.
+SHARED_MATERIALS = ("tassel", "cord")
 
 
 def face_dims(size, face):
@@ -122,28 +124,29 @@ def face_dims(size, face):
 
 
 def purse_boxes():
-    """La bourse : un corps rond approche par des etages (le profil d'une
-    bourse pleine, large au ventre, resserre au col), la cordelette nouee
-    devant avec deux brins qui pendent, et une bouche evasee faite de deux
-    boites croisees (vue de dessus une etoile a huit branches, l'effet fronce
-    d'une bourse fermee)."""
+    """La bourse, a la maniere des items vanilla (l'oeuf est un cube, le sac de
+    farine trois boites) : peu de boites, la rondeur dans la texture.
+
+    Corps en trois boites (un dessous rentre, le ventre, une epaule tournee a
+    45 degres pour casser l'etage), un col, la cordelette avec son fermoir et
+    deux brins qui pendent devant, et le fronce au-dessus du col en deux
+    boites croisees a 45 degres, plus larges que le col."""
     b = []
-    b.append(Box("Base", (9, 2, 7), (0, 1, 0), "leather"))
-    b.append(Box("Belly_Low", (12, 4, 10), (0, 4, 0), "leather"))
-    b.append(Box("Belly", (14, 8, 12), (0, 10, 0), "belly"))
-    b.append(Box("Belly_High", (12, 4, 10), (0, 16, 0), "leather"))
-    b.append(Box("Shoulder", (9, 3, 7), (0, 19.5, 0), "leather"))
-    b.append(Box("Neck", (6, 3, 5), (0, 22.5, 0), "pleats"))
-    b.append(Box("Cord", (7.5, 1.5, 6.5), (0, 22.25, 0), "cord"))
-    b.append(Box("Knot", (3, 2, 1.5), (0, 22.25, 3.8), "cord"))
-    b.append(Box("Tassel_L", (1, 4, 1), (-1.1, 19.5, 4.0), "tassel"))
-    b.append(Box("Tassel_R", (1, 4, 1), (1.3, 19.0, 4.0), "tassel"))
-    b.append(Box("Mouth", (7, 3, 6), (0, 25.5, 0), "pleats",
-                 orientation=q_axis((1, 0, 0), 5)))
-    b.append(Box("Mouth_X", (6, 2.8, 5.5), (0, 25.7, 0), "pleats",
-                 orientation=q_mul(q_axis((0, 1, 0), 45), q_axis((0, 0, 1), -4))))
-    # le tampon Obol : une piece d'or cousue sur le ventre, en relief
-    b.append(Box("Stamp", (5, 5, 0.6), (0, 10, 6.3), "stamp"))
+    b.append(Box("Bottom", (12, 2, 10), (0, 1, 0), "body"))
+    b.append(Box("Belly", (14, 8, 12), (0, 6, 0), "body"))
+    b.append(Box("Shoulder", (9.5, 2.5, 9.5), (0, 11.25, 0), "body",
+                 orientation=q_axis((0, 1, 0), 45)))
+    b.append(Box("Neck", (6, 3, 5.5), (0, 14, 0), "pleats"))
+    b.append(Box("Cord", (7.5, 1.5, 7), (0, 13.75, 0), "cord"))
+    # le fermoir : une piece d'or a travers laquelle passe la cordelette
+    b.append(Box("Clasp", (3.5, 3.5, 0.8), (0, 13.75, 3.8), "stamp"))
+    b.append(Box("Tassel_L", (1, 5, 1), (-1.0, 10.5, 4.2), "tassel"))
+    b.append(Box("Tassel_R", (1, 3.5, 1), (1.2, 11.25, 4.2), "tassel"))
+    # le fronce : deux boites croisees, une etoile a huit branches vue de dessus
+    b.append(Box("Top", (7, 3.5, 6.5), (0, 17.25, 0), "pleats",
+                 orientation=q_axis((1, 0, 0), 4)))
+    b.append(Box("Top_X", (6.5, 3.2, 6.5), (0, 17.35, 0), "pleats",
+                 orientation=q_mul(q_axis((0, 1, 0), 45), q_axis((0, 0, 1), -5))))
     return b
 
 
@@ -160,9 +163,12 @@ def pack_uv(boxes):
                     "top": "tb", "bottom": "tb"}[face]
             if box.material == "stamp" and face == "front":
                 side = "front"          # la piece, jamais partage
+            if box.name == "Belly" and face == "front":
+                side = "front"          # porte l'emblem, jamais partage
             if box.material == "pleats" and side == "tb":
                 side = face             # dessus fronce, dessous cuir
-            wanted.append((h, w, box, face, (id(box), w, h, side)))
+            owner = box.material if box.material in SHARED_MATERIALS else id(box)
+            wanted.append((h, w, box, face, (owner, w, h, side)))
     wanted.sort(key=lambda t: (-t[0], -t[1]))
 
     shelves = []   # [y, height, x_cursor]
@@ -234,11 +240,14 @@ def model_json(boxes):
 # (aplats chauds, ombres douces, grain leger, pas de contour noir)
 # =============================================================================
 
-LEATHER = {"light": (198, 142, 90), "base": (160, 108, 64), "dark": (114, 72, 42),
-           "seam": (72, 44, 26)}
-CORD = {"light": (222, 190, 120), "base": (184, 146, 78), "dark": (128, 96, 46)}
+# Cuir : quatre tons, comme les textures vanilla (sac de farine, cuir leger).
+LEATHER = {"light": (196, 140, 88), "base": (158, 106, 62), "dark": (108, 66, 38),
+           "seam": (66, 38, 22)}
+# Cordelette en laine naturelle.
+CORD = {"light": (226, 206, 168), "base": (196, 172, 130), "dark": (140, 118, 84)}
 GOLD = {"light": (255, 240, 113), "base": (228, 183, 31), "shade": (174, 107, 22),
         "edge": (153, 76, 21)}
+HOLE = (46, 32, 26)
 
 
 def lerp(a, b, t):
@@ -264,49 +273,91 @@ def value_noise(w, h, cells, seed):
     return out
 
 
-def paint_leather(px, rect, seed, seam=False, top_light=True):
-    """Cuir : aplat chaud, taches douces, un grain leger, plus sombre vers le
-    bas de chaque face. `seam` ajoute une couture au ras du bas."""
+def paint_body(px, rect, seed, face):
+    """Cuir d'une face du corps, rondeur peinte : clair vers le centre-haut,
+    sombre vers les bords (le vignettage des textures vanilla), un grain
+    leger, et sur le devant une couture au ras du bas."""
     x0, y0, w, h = rect
     noise = value_noise(w, h, 3, seed)
     rnd = random.Random(seed + 1)
+    cx, cy = (w - 1) / 2, (h - 1) * 0.38     # le point clair un peu au-dessus du centre
     for y in range(h):
-        t = y / max(1, h - 1)
         for x in range(w):
-            c = lerp(LEATHER["light"], LEATHER["base"], 0.3 + 0.5 * t) if top_light \
-                else LEATHER["base"]
-            c = lerp(c, LEATHER["dark"], noise[y][x] * 0.4)
-            g = rnd.randint(-5, 5)
-            c = tuple(max(0, min(255, v + g)) for v in c)
-            px[x0 + x, y0 + y] = c + (255,)
-    if seam and h >= 4 and w >= 4:
-        for x in range(1, w - 1, 2):
+            dx, dy = (x - cx) / max(1, cx), (y - cy) / max(1, (h - 1) / 2)
+            d = min(1.0, math.hypot(dx, dy * 0.9))
+            if face == "bottom":
+                c = lerp(LEATHER["base"], LEATHER["dark"], 0.4 + 0.4 * d)
+            elif face == "top":
+                c = lerp(LEATHER["base"], LEATHER["dark"], 0.25 + 0.35 * d)
+            else:
+                c = lerp(LEATHER["light"], LEATHER["base"], 0.25 + 0.75 * d * d)
+                c = lerp(c, LEATHER["dark"], max(0.0, d - 0.55) * 1.2)
+            c = lerp(c, LEATHER["dark"], noise[y][x] * 0.18)
+            g = rnd.randint(-4, 4)
+            px[x0 + x, y0 + y] = tuple(max(0, min(255, v + g)) for v in c) + (255,)
+    if face in ("front", "back") and h >= 6:
+        for x in range(2, w - 2, 2):
             px[x0 + x, y0 + h - 2] = LEATHER["seam"] + (255,)
 
 
+def paint_emblem(px, rect):
+    """L'obole : une piece d'or embossee sur le devant, ombre portee en bas
+    a droite. Le seul ornement, celui d'une bourse a monnaie."""
+    x0, y0, w, h = rect
+    cx, cy = x0 + w // 2, y0 + h // 2 - 1
+    r = 3
+    for y in range(-r, r + 2):
+        for x in range(-r, r + 2):
+            d = math.hypot(x, y)
+            ds = math.hypot(x - 1, y - 1)
+            if d > r + 0.3 and ds <= r + 0.3:
+                px[cx + x, cy + y] = LEATHER["seam"] + (255,)
+    for y in range(-r, r + 1):
+        for x in range(-r, r + 1):
+            d = math.hypot(x, y)
+            if d > r + 0.3:
+                continue
+            if d > r - 0.8:
+                c = GOLD["edge"]
+            elif x + y < -r * 0.8:
+                c = GOLD["light"]
+            elif x + y > r * 0.7:
+                c = GOLD["shade"]
+            else:
+                c = GOLD["base"]
+            if x == 0 and y == 0:
+                c = GOLD["shade"]
+            px[cx + x, cy + y] = c + (255,)
+
+
 def paint_pleats(px, rect, seed):
-    """Tissu fronce : colonnes claires et moyennes, un peu irregulieres, qui
-    s'assombrissent vers le bas (vers le col)."""
+    """Tissu fronce : colonnes claires et moyennes, qui s'assombrissent vers
+    le bas, la ou le cordon serre."""
     x0, y0, w, h = rect
     rnd = random.Random(seed)
     for x in range(w):
-        phase = (x + rnd.randint(0, 1)) % 2
-        col = (LEATHER["light"], LEATHER["base"])[phase]
+        col = (LEATHER["light"], LEATHER["base"], LEATHER["base"])[(x + rnd.randint(0, 1)) % 3]
         for y in range(h):
-            c = lerp(col, LEATHER["dark"], 0.4 * (y / max(1, h - 1)))
+            c = lerp(col, LEATHER["dark"], 0.5 * (y / max(1, h - 1)))
             px[x0 + x, y0 + y] = c + (255,)
 
 
-def paint_mouth_top(px, rect, seed):
-    """Dessus de la bouche : le cuir fronce vu d'en haut, un creux au centre."""
+def paint_hole(px, rect):
+    """Dessus du fronce : les plis convergent vers un petit trou sombre au
+    centre, la bourse est serree, pas ouverte."""
     x0, y0, w, h = rect
-    paint_leather(px, rect, seed)
     cx, cy = (w - 1) / 2, (h - 1) / 2
     for y in range(h):
         for x in range(w):
-            d = math.hypot((x - cx) / max(1, cx), (y - cy) / max(1, cy))
-            if d < 0.45:
-                px[x0 + x, y0 + y] = lerp(LEATHER["seam"], LEATHER["dark"], d / 0.45) + (255,)
+            dx, dy = x - cx, y - cy
+            d = math.hypot(dx, dy)
+            if d <= 1.2:
+                c = HOLE
+            else:
+                sector = int(((math.atan2(dy, dx) + math.pi) / (2 * math.pi)) * 8) % 8
+                c = (LEATHER["light"], LEATHER["base"])[sector % 2]
+                c = lerp(c, LEATHER["dark"], max(0.0, 1 - d / 3) * 0.7)
+            px[x0 + x, y0 + y] = c + (255,)
 
 
 def paint_cord(px, rect, seed):
@@ -367,10 +418,21 @@ def paint_texture(boxes):
             painted.add(rect)
             seed += 13
             m = box.material
-            if m in ("leather", "belly"):
-                paint_leather(px, rect, seed,
-                              seam=m == "belly" and face not in ("top", "bottom"),
-                              top_light=face != "bottom")
+            if m == "body":
+                paint_body(px, rect, seed, face)
+                if box.name == "Belly" and face == "front":
+                    paint_emblem(px, rect)
+            elif m == "pleats":
+                if face == "top":
+                    paint_hole(px, rect)
+                elif face == "bottom":
+                    paint_body(px, rect, seed, "bottom")
+                else:
+                    paint_pleats(px, rect, seed)
+            elif m == "cord":
+                paint_cord(px, rect, seed)
+            elif m == "tassel":
+                paint_tassel(px, rect)
             elif m == "stamp":
                 if face == "front":
                     paint_stamp(px, rect)
@@ -379,17 +441,6 @@ def paint_texture(boxes):
                     for y in range(h):
                         for x in range(w):
                             px[x0 + x, y0 + y] = GOLD["edge"] + (255,)
-            elif m == "pleats":
-                if face == "top":
-                    paint_mouth_top(px, rect, seed)
-                elif face == "bottom":
-                    paint_leather(px, rect, seed, top_light=False)
-                else:
-                    paint_pleats(px, rect, seed)
-            elif m == "cord":
-                paint_cord(px, rect, seed)
-            elif m == "tassel":
-                paint_tassel(px, rect)
     return img
 
 
