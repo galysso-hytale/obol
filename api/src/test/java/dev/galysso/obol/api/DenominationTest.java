@@ -25,6 +25,14 @@ class DenominationTest {
     }
 
     @Test
+    void textureIsThePackImageOfTheTier() {
+        assertEquals("Obol/Copper.png", Denomination.COPPER.texture());
+        assertEquals("Obol/Silver.png", Denomination.SILVER.texture());
+        assertEquals("Obol/Gold.png", Denomination.GOLD.texture());
+        assertEquals("Obol/Mythril.png", Denomination.MYTHRIL.texture());
+    }
+
+    @Test
     void symbolsAndColoursAreDistinct() {
         Denomination[] tiers = Denomination.values();
         for (int i = 0; i < tiers.length; i++) {

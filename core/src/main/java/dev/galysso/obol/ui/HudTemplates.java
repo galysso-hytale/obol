@@ -38,7 +38,10 @@ public final class HudTemplates {
     /** Selector, inside a feed row, of the chip the tier documents are appended into. */
     public static final String CHANGE = "#Change";
 
-    /** Directory of the tier documents and images, under {@code Common/UI/Custom/}. */
+    /**
+     * Directory of the tier documents and images, under {@code Common/UI/Custom/}:
+     * the one {@link Denomination#texture()} points into.
+     */
     public static final String PACK_DIR = "Obol";
 
     /** Directory of the smaller tier documents of the feed, under {@link #PACK_DIR}. */
@@ -275,10 +278,15 @@ public final class HudTemplates {
      */
     public record Tier(Denomination denomination, long count) {
 
-        /** {@return the name of the tier as the pack spells it, e.g. {@code Gold}} */
+        /**
+         * {@return the name of the tier as the pack spells it, e.g. {@code Gold}}
+         *
+         * <p>The stem of {@link Denomination#texture()}: the documents sit next
+         * to the image and are named after it.</p>
+         */
         public String name() {
-            String lower = denomination.name().toLowerCase(Locale.ROOT);
-            return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+            String texture = denomination.texture();
+            return texture.substring(texture.lastIndexOf('/') + 1, texture.length() - ".png".length());
         }
 
         /** {@return the document to append, relative to {@code Common/UI/Custom/}} */

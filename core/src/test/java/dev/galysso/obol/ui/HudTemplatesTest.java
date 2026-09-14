@@ -159,6 +159,8 @@ class HudTemplatesTest {
     void everyTierHasItsDocumentAndImageInThePack(Denomination denomination) throws IOException {
         HudTemplates.Tier tier = tier(denomination, 1);
         String base = "/Common/UI/Custom/" + HudTemplates.PACK_DIR + "/" + tier.name();
+        assertEquals(HudTemplates.PACK_DIR + "/" + tier.name() + ".png", denomination.texture(),
+                "the public texture path is the pack image next to the documents");
         String document;
         try (InputStream in = HudTemplatesTest.class.getResourceAsStream(base + ".ui")) {
             assertNotNull(in, base + ".ui");

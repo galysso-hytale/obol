@@ -1,5 +1,7 @@
 package dev.galysso.obol.api;
 
+import java.util.Locale;
+
 /**
  * The four coin tiers, from the smallest to the largest.
  *
@@ -17,14 +19,19 @@ public enum Denomination {
     GOLD(10_000L, "g", "#FFD700"),
     MYTHRIL(1_000_000L, "m", "#7FDBFF");
 
+    /** Directory of the coin images in Obol's asset pack, under {@code Common/UI/Custom/}. */
+    private static final String PACK_DIR = "Obol";
+
     private final long valueInCopper;
     private final String symbol;
     private final String color;
+    private final String texture;
 
     Denomination(long valueInCopper, String symbol, String color) {
         this.valueInCopper = valueInCopper;
         this.symbol = symbol;
         this.color = color;
+        this.texture = PACK_DIR + "/" + name().charAt(0) + name().substring(1).toLowerCase(Locale.ROOT) + ".png";
     }
 
     /**
@@ -52,6 +59,23 @@ public enum Denomination {
      */
     public String color() {
         return color;
+    }
+
+    /**
+     * {@return the path of the coin image Obol draws for this tier, relative
+     * to {@code Common/UI/Custom/}, e.g. {@code Obol/Gold.png}}
+     *
+     * <p>A 48×48 PNG shipped in Obol's asset pack, so every server running
+     * Obol has it. A UI document of another mod, in its own directory under
+     * {@code Common/UI/Custom/}, reaches it as {@code "../" + texture()}.
+     * The path and the image size are part of the API and follow its
+     * versioning; the drawing itself may change.</p>
+     *
+     * <p>This is a UI texture, not an item icon: a mod giving coins a
+     * physical form needs its own item assets.</p>
+     */
+    public String texture() {
+        return texture;
     }
 
     /**
