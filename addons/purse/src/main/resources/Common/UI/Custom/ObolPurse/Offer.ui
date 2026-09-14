@@ -1,6 +1,5 @@
-// The giver's side of handing a purse over (GivePopup): the confirmation,
-// then the wait for the receiver's answer (#YesButton hidden, #NoButton
-// reads Cancel). #Question and #Amount are set by the server.
+// What the receiver of a handed purse sees (AcceptPopup). #Question and
+// #Amount are set by the server.
 $C = "../Common.ui";
 $Sounds = "../Sounds.ui";
 
@@ -32,17 +31,17 @@ $C.@PageOverlay {
       Group {
         LayoutMode: Center;
 
-        $C.@TextButton #YesButton {
+        $C.@TextButton #AcceptButton {
           @Sounds = $Sounds.@SaveSettings;
           @Anchor = (Right: 4);
-          Text: "Yes";
+          Text: "Accept";
           FlexWeight: 1;
         }
 
-        $C.@SecondaryTextButton #NoButton {
+        $C.@SecondaryTextButton #DeclineButton {
           @Sounds = $Sounds.@ButtonsCancel;
           @Anchor = (Left: 4);
-          Text: "No";
+          Text: "Decline";
           FlexWeight: 1;
         }
       }

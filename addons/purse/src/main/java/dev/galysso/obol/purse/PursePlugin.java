@@ -40,9 +40,11 @@ public class PursePlugin extends JavaPlugin {
             configFile.save();
         }
         PurseOps ops = new PurseOps(getLogger());
+        PurseOffers offers = new PurseOffers(ops, getLogger(), config.offerTimeoutSeconds());
         OpenCustomUIInteraction.registerCustomPageSupplier(this, PursePageSupplier.class,
-                PursePageSupplier.PAGE_ID, new PursePageSupplier(ops, config));
+                PursePageSupplier.PAGE_ID, new PursePageSupplier(ops, offers, config));
         getCommandRegistry().registerCommand(new PurseCommand(ops));
-        getLogger().atInfo().log("Purse ready (direct give %s)", config.directGive() ? "on" : "off");
+        getLogger().atInfo().log("Purse ready (direct give %s, offers open %d s)",
+                config.directGive() ? "on" : "off", config.offerTimeoutSeconds());
     }
 }

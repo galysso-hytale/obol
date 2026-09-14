@@ -10,8 +10,13 @@ The purse is never used up.
 - **Right-click** with it in hand: your balance on the left, the purse on
   the right, one row per coin on each side with buttons that send 1 or 10
   of that coin across, and two more that move everything.
-- **Right-click a player** with a full purse: "Give 2g 35s to X? Yes / No".
-  Yes credits their balance, the purse stays in your hand, empty.
+- **Right-click a player** with a full purse: "Hand over to X?", the coins,
+  Yes / No. Yes makes an offer: they see "<you> offers you", the same
+  coins, "Accept / Decline"
+  and you wait, with Cancel. Accept credits their balance, the purse stays
+  in your hand, empty. Nobody receives coins without saying yes. An offer
+  expires after 30 seconds, and a declined giver waits as long before
+  offering again to the same player.
 - **It shows what it holds.** An empty purse is flat with a dark cord. A
   purse with coins in it is round, its cord takes the colour of the
   largest coin inside, copper to mythril, and so do the frame of its
@@ -31,6 +36,7 @@ start:
 | Key | Default | Effect |
 |---|---|---|
 | `DirectGive` | `true` | Right-clicking a player offers to hand the content over. Off, coins only change hands through the item itself. |
+| `OfferTimeoutSeconds` | `30` | How long the receiver has to answer (at least 5), and how long a declined giver waits before offering again to the same player. |
 
 Admins (`obol.purse.debug`, given to `hytale:Admin` by default) have a
 testing aid on the purse in hand: `/purse put <amount>`,

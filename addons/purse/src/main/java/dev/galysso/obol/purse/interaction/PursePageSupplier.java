@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.purse.PurseConfig;
+import dev.galysso.obol.purse.PurseOffers;
 import dev.galysso.obol.purse.PurseOps;
 import dev.galysso.obol.purse.api.PurseItem;
 import dev.galysso.obol.purse.ui.GivePopup;
@@ -25,7 +26,7 @@ import java.util.Objects;
  * {@code {"Type": "OpenCustomUI", "Page": {"Id": "ObolPurse"}}} and the
  * server asks this supplier, registered under {@link #PAGE_ID}, for the
  * page: the purse page, or, when a player is in the crosshair and the
- * config allows it, the confirmation to hand the content over.
+ * config allows it, the confirmation to offer the content to that player.
  *
  * <p>One entry point for both: a second interaction would need a second
  * item or a client-side chain to tell them apart. Returning {@code null}
@@ -37,10 +38,12 @@ public final class PursePageSupplier implements OpenCustomUIInteraction.CustomPa
     public static final String PAGE_ID = "ObolPurse";
 
     private final PurseOps ops;
+    private final PurseOffers offers;
     private final PurseConfig config;
 
-    public PursePageSupplier(PurseOps ops, PurseConfig config) {
+    public PursePageSupplier(PurseOps ops, PurseOffers offers, PurseConfig config) {
         this.ops = Objects.requireNonNull(ops, "ops");
+        this.offers = Objects.requireNonNull(offers, "offers");
         this.config = Objects.requireNonNull(config, "config");
     }
 
@@ -60,7 +63,7 @@ public final class PursePageSupplier implements OpenCustomUIInteraction.CustomPa
                 playerRef.sendMessage(Message.raw("The purse is empty."));
                 return null;
             }
-            return new GivePopup(playerRef, ops, container, slot, target, content);
+            return new GivePopup(playerRef, offers, container, slot, target, content);
         }
         ItemContainer inventory = InventoryComponent.getCombined(accessor, ref, InventoryComponent.HOTBAR_FIRST);
         return new PursePage(playerRef, ops, container, slot, inventory);
