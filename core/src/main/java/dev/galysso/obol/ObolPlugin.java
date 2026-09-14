@@ -3,6 +3,9 @@ package dev.galysso.obol;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import dev.galysso.obol.api.internal.ObolApiHolder;
+import dev.galysso.obol.command.BalanceCommand;
+import dev.galysso.obol.command.ObolCommand;
+import dev.galysso.obol.command.PayCommand;
 import dev.galysso.obol.internal.ObolApiImpl;
 
 import javax.annotation.Nonnull;
@@ -23,5 +26,8 @@ public class ObolPlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
+        getCommandRegistry().registerCommand(new BalanceCommand());
+        getCommandRegistry().registerCommand(new PayCommand());
+        getCommandRegistry().registerCommand(new ObolCommand());
     }
 }
