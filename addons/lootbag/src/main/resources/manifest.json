@@ -1,0 +1,25 @@
+{
+    "Group": "Galysso",
+    "Name": "obol-lootbag",
+    "Version": "0.1.0",
+    "Description": "Lootbags of coins that only drop from chests and mobs, credited to the balance when opened.",
+    "Authors": [
+        {
+            "Name": "Galysso"
+        }
+    ],
+    "Website": "https://github.com/galysso/obol",
+    "ServerVersion": ">=0.6.0 <0.7.0",
+    "Dependencies": {
+        "Galysso:obol": ">=0.2.0"
+    },
+    "OptionalDependencies": {
+        
+    },
+    "DisabledByDefault": false,
+    "Main": "dev.galysso.obol.lootbag.LootbagPlugin",
+    "IncludesAssetPack": true,
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}
