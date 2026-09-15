@@ -35,5 +35,19 @@
     ]
   },
   "ItemSoundSetId": "ISS_Items_Leather",
-  "DropOnDeath": true
+  "DropOnDeath": true,
+  "Interactions": {
+    "Secondary": {
+      "RequireNewClick": true,
+      "Interactions": [
+        {
+          "Type": "Simple",
+          "RunTime": 0,
+          "Effects": {
+            "WorldSoundEventId": "SFX_Obol_Lootbag_Open"
+          }
+        }
+      ]
+    }
+  }
 }
