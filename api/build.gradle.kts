@@ -1,9 +1,12 @@
 // Public API of Obol. Published standalone so third-party plugins can
 // compile against it without depending on the implementation.
 //
-// Deliberate constraint: this module has NO dependency on the Hytale server.
-// It must stay compilable against the JDK alone. See CONTRIBUTING notes in
-// README.md for the rationale and the escape hatch.
+// Deliberate constraint: the value types and the facade (Obol, Coins,
+// Wallet...) depend on the JDK alone, so they are unit-tested here with no
+// server in the loop. The one exception is ObolUi, which draws coins into a
+// page and therefore names the server's UICommandBuilder: the server jar is
+// on the compile classpath only (compileOnly), never a runtime dependency,
+// and nothing else in the module may touch it.
 plugins {
     `java-library`
     `maven-publish`
@@ -20,6 +23,16 @@ java {
 
 repositories {
     mavenCentral()
+    maven {
+        name = "Hytale Server Release"
+        url = uri("https://maven.hytale.com/release")
+    }
+}
+
+dependencies {
+    // For ObolUi only, see the header. Same coordinates the workspace plugin
+    // resolves for core.
+    compileOnly("com.hypixel.hytale:Server:${property("hytale_version")}")
 }
 
 // The reason this module exists without Hytale: value types and the facade

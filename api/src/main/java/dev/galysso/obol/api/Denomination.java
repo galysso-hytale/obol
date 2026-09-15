@@ -25,13 +25,20 @@ public enum Denomination {
     private final long valueInCopper;
     private final String symbol;
     private final String color;
+    private final String fileName;
     private final String texture;
 
     Denomination(long valueInCopper, String symbol, String color) {
         this.valueInCopper = valueInCopper;
         this.symbol = symbol;
         this.color = color;
-        this.texture = PACK_DIR + "/" + name().charAt(0) + name().substring(1).toLowerCase(Locale.ROOT) + ".png";
+        this.fileName = name().charAt(0) + name().substring(1).toLowerCase(Locale.ROOT);
+        this.texture = PACK_DIR + "/" + fileName + ".png";
+    }
+
+    /** {@return the tier's name as Obol's asset files spell it, {@code Gold}} */
+    String fileName() {
+        return fileName;
     }
 
     /**

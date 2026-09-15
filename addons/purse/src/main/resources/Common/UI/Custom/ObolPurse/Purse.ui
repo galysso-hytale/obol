@@ -1,23 +1,21 @@
 // The purse page, opened by a right-click with the purse in hand
 // (PursePage). Two panels side by side: what the player has (#Mine), what
 // the purse holds (#Purse). Each has a title, the total, and one row per
-// coin tier, largest first: the coin's image and count (Obol's image and
-// colour), and two buttons that send 1 or 10 coins of that tier across to
-// the other panel ("1 >" from #Mine into the purse, "< 1" from #Purse back).
-// Under the panels, two buttons move everything. The server fills
-// "#Mine #Total.Text", "#Mine #Gold #Count.Text" and the like, disables
-// the buttons that cannot apply, and binds "#Mine #Gold #Put10" and the
-// others. The two panels share the content width (FlexWeight), and in
-// each row the count takes what the coin and the buttons leave, so the
-// page is filled edge to edge whatever the container width. A count sits
-// next to its coin: left-aligned on the balance side, right-aligned on the
-// purse side.
+// coin tier, largest first, with two buttons that send 1 or 10 coins of
+// that tier across to the other panel ("1 >" from #Mine into the purse,
+// "< 1" from #Purse back). Under the panels, two buttons move everything.
+// Every amount is drawn by Obol (ObolUi.show, the API): the server fills
+// "#Mine #Total" with the whole balance and "#Mine #Gold #Coins" with the
+// count of that tier, packed towards the buttons (start on the balance
+// side, end on the purse side), disables the buttons that cannot apply,
+// and binds "#Mine #Gold #Put10" and the others. The two panels share the
+// content width (FlexWeight), and in each row the coins take what the
+// buttons leave, so the page is filled edge to edge whatever the container
+// width.
 $C = "../Common.ui";
 $Sounds = "../Sounds.ui";
 
 @Caption = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, HorizontalAlignment: Center, RenderUppercase: true, RenderBold: true, FontSize: 13);
-@Total = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, HorizontalAlignment: Center, FontSize: 15);
-@Count = (FontSize: 18, RenderBold: true, VerticalAlignment: Center, HorizontalAlignment: End);
 @ButtonWidth = 60;
 @Gap = 12;
 
@@ -53,25 +51,16 @@ $C.@PageOverlay {
             Style: @Caption;
           }
 
-          Label #Total {
-            Text: "0c";
-            Anchor: (Height: 22, Bottom: 8);
-            Style: @Total;
+          Group #Total {
+            Anchor: (Height: 24, Bottom: 8);
           }
 
           Group #Mythril {
             LayoutMode: Left;
             Anchor: (Height: 32, Bottom: 6);
 
-            Group {
-              Background: (TexturePath: "../Obol/Mythril.png");
-              Anchor: (Width: 22, Height: 22, Right: 8);
-            }
-
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, HorizontalAlignment: Start, TextColor: #7FDBFF);
             }
 
             $C.@SmallSecondaryTextButton #Put1 {
@@ -84,21 +73,15 @@ $C.@PageOverlay {
               Anchor: (Width: @ButtonWidth, Height: $C.@SmallButtonHeight);
               Padding: (Horizontal: 4);
               Text: "10 >";
-            }      }
+            }
+          }
 
           Group #Gold {
             LayoutMode: Left;
             Anchor: (Height: 32, Bottom: 6);
 
-            Group {
-              Background: (TexturePath: "../Obol/Gold.png");
-              Anchor: (Width: 22, Height: 22, Right: 8);
-            }
-
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, HorizontalAlignment: Start, TextColor: #FFD700);
             }
 
             $C.@SmallSecondaryTextButton #Put1 {
@@ -111,21 +94,15 @@ $C.@PageOverlay {
               Anchor: (Width: @ButtonWidth, Height: $C.@SmallButtonHeight);
               Padding: (Horizontal: 4);
               Text: "10 >";
-            }      }
+            }
+          }
 
           Group #Silver {
             LayoutMode: Left;
             Anchor: (Height: 32, Bottom: 6);
 
-            Group {
-              Background: (TexturePath: "../Obol/Silver.png");
-              Anchor: (Width: 22, Height: 22, Right: 8);
-            }
-
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, HorizontalAlignment: Start, TextColor: #C0C0C0);
             }
 
             $C.@SmallSecondaryTextButton #Put1 {
@@ -138,21 +115,15 @@ $C.@PageOverlay {
               Anchor: (Width: @ButtonWidth, Height: $C.@SmallButtonHeight);
               Padding: (Horizontal: 4);
               Text: "10 >";
-            }      }
+            }
+          }
 
           Group #Copper {
             LayoutMode: Left;
             Anchor: (Height: 32, Bottom: 6);
 
-            Group {
-              Background: (TexturePath: "../Obol/Copper.png");
-              Anchor: (Width: 22, Height: 22, Right: 8);
-            }
-
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, HorizontalAlignment: Start, TextColor: #B87333);
             }
 
             $C.@SmallSecondaryTextButton #Put1 {
@@ -165,7 +136,8 @@ $C.@PageOverlay {
               Anchor: (Width: @ButtonWidth, Height: $C.@SmallButtonHeight);
               Padding: (Horizontal: 4);
               Text: "10 >";
-            }      }
+            }
+          }
         }
 
         Group {
@@ -185,10 +157,8 @@ $C.@PageOverlay {
             Style: @Caption;
           }
 
-          Label #Total {
-            Text: "0c";
-            Anchor: (Height: 22, Bottom: 8);
-            Style: @Total;
+          Group #Total {
+            Anchor: (Height: 24, Bottom: 8);
           }
 
           Group #Mythril {
@@ -207,15 +177,8 @@ $C.@PageOverlay {
               Text: "< 10";
             }
 
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, TextColor: #7FDBFF);
-            }
-
-            Group {
-              Background: (TexturePath: "../Obol/Mythril.png");
-              Anchor: (Width: 22, Height: 22, Left: 8);
             }
           }
 
@@ -235,15 +198,8 @@ $C.@PageOverlay {
               Text: "< 10";
             }
 
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, TextColor: #FFD700);
-            }
-
-            Group {
-              Background: (TexturePath: "../Obol/Gold.png");
-              Anchor: (Width: 22, Height: 22, Left: 8);
             }
           }
 
@@ -263,15 +219,8 @@ $C.@PageOverlay {
               Text: "< 10";
             }
 
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, TextColor: #C0C0C0);
-            }
-
-            Group {
-              Background: (TexturePath: "../Obol/Silver.png");
-              Anchor: (Width: 22, Height: 22, Left: 8);
             }
           }
 
@@ -291,15 +240,8 @@ $C.@PageOverlay {
               Text: "< 10";
             }
 
-            Label #Count {
-              Text: "0";
+            Group #Coins {
               FlexWeight: 1;
-              Style: (...@Count, TextColor: #B87333);
-            }
-
-            Group {
-              Background: (TexturePath: "../Obol/Copper.png");
-              Anchor: (Width: 22, Height: 22, Left: 8);
             }
           }
         }

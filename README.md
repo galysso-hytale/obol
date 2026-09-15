@@ -55,7 +55,7 @@ behind the API and the patterns that fit it.
 
 ```kotlin
 dependencies {
-    compileOnly("dev.galysso.obol:obol-api:0.2.0")   // JDK-only, no server types
+    compileOnly("dev.galysso.obol:obol-api:0.2.0")   // server types only in ObolUi
 }
 ```
 
@@ -130,14 +130,37 @@ a bottom corner): one row per change, newest first, at most five, each fully
 shown for 4 s then fading out over 1 s; nothing is merged, the oldest row
 goes when a sixth arrives. A fixed overlay has no feed.
 
-The coin images are part of the API, for pages of your own that show
-amounts: `Denomination.texture()` gives the path of each one relative to
-`Common/UI/Custom/` (`Obol/Gold.png`, a 48×48 PNG shipped by Obol), so a
-document of yours in `Common/UI/Custom/<YourMod>/` draws it with
-`Background: (TexturePath: "../Obol/Gold.png");` and `Denomination.color()`
-gives the matching text colour. Paths and sizes follow `obol-api`
-versioning, the drawings themselves may change. They are UI textures, not
-item icons: a mod giving coins a physical form needs its own item assets.
+Inside a page of your own (a `CustomUIPage`), Obol draws the coins for
+you, so that a price looks the same in every mod and in the HUD:
+
+```java
+@Override
+public void build(Ref<EntityStore> ref, UICommandBuilder commands, UIEventBuilder events, Store<EntityStore> store) {
+    commands.append("MyShop/Page.ui");
+    for (Article article : articles) {
+        ObolUi.show(commands, "#" + article.id() + " #Price", article.price());   // an empty group of your document
+    }
+    ObolUi.show(commands, "#Cart #Gold", Denomination.GOLD, 12, CoinsStyle.DEFAULT.withAlignment(CoinsStyle.Alignment.END));
+}
+```
+
+`ObolUi.show(builder, selector, coins)` fills the group at `selector` with
+the same pill as the HUD, centred (a `CoinsStyle` moves it to the start or
+the end of the group); `show(builder, selector, tier, count)` draws one tier
+alone, even at zero, for a page that lays tiers out itself. The group takes
+the width of its content and the height you give it (the coins are 24
+pixels high). Fill a group once, and `clear` it before filling it again.
+The pictures and colours are Obol's; a mod never has to draw a coin.
+
+The coin images themselves are also part of the API, for the rare document
+that needs one outside an amount: `Denomination.texture()` gives the path of
+each one relative to `Common/UI/Custom/` (`Obol/Gold.png`, a 48×48 PNG
+shipped by Obol), so a document of yours in `Common/UI/Custom/<YourMod>/`
+draws it with `Background: (TexturePath: "../Obol/Gold.png");` and
+`Denomination.color()` gives the matching text colour. Paths and sizes
+follow `obol-api` versioning, the drawings themselves may change. They are
+UI textures, not item icons: a mod giving coins a physical form needs its
+own item assets.
 
 ### Listening
 
@@ -156,6 +179,17 @@ Obol is not loaded (missing or misordered manifest dependency).
 `show(viewer, position, coins)` and `track(viewer, position, wallet)` →
 `CoinsOverlay`, `addListener(l)` (twice = called twice), `removeListener(l)`
 → `boolean`.
+
+**`ObolUi`** — static, `IllegalStateException` if Obol is not loaded.
+`show(builder, selector, coins[, style])` and `show(builder, selector, tier,
+count[, style])` queue the commands that draw the coins into the group at
+`selector` (count then coin per tier, largest first, the HUD's rule for
+which tiers appear). The only class of the API that names a server type
+(`UICommandBuilder`).
+
+**`CoinsStyle`** — a record, `DEFAULT` (centred) and
+`withAlignment(START | CENTER | END)`. Options may be added, each with a
+default.
 
 **`Wallet`** — a stateless handle, equal to any other with the same `id()`.
 `balance()`, `canAfford(c)` (read-only hint; trust `withdraw` instead),
@@ -220,11 +254,13 @@ major version, interfaces gain methods only with a `default` body.
 
 ## Building
 
-Two modules: `api` (`java-library`, JDK-only, published as
-`dev.galysso.obol:obol-api`) and `core` (`com.azuredoom.hytale-tools`: the
+Two modules: `api` (`java-library`, published as
+`dev.galysso.obol:obol-api`, JDK-only except `ObolUi`, which sees the server
+jar at compile time only) and `core` (`com.azuredoom.hytale-tools`: the
 plugin, `manifest.json`, one jar that also contains `api`). `core/src/main/
-resources` is the asset pack (`Common/UI/Custom/Obol/<Tier>.{ui,png}`; the
-64×64 originals are in `tmp/`). Identity and versions live in
+resources` is the asset pack (`Common/UI/Custom/Obol/<Tier>.{ui,png}` for
+the HUD, `Obol/Coins/<Tier>.ui` for `ObolUi`; the 64×64 originals are in
+`tmp/`). Identity and versions live in
 `gradle.properties`; `manifest.json` is generated from it. Add-ons are
 sub-projects under `addons/` (`addons/purse`), each a plugin of its own with
 its own version, built and run alone or with everything else

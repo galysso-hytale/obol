@@ -32,6 +32,24 @@ comme API mais il est stable, c'est ce que les tests d'Obol utilisent.
 Rupture assumée : `obol-api` passe en `0.2.0` (`gradle.properties`, le jar
 n'est pas encore sur un dépôt public).
 
+### Principes (posés le 2026-09-14)
+
+- **Obol fournit tout ce dont un mod a besoin**, y compris l'affichage :
+  un mod n'a jamais à dessiner une pièce, à connaître une texture ou une
+  couleur. L'API doit être la plus intuitive et la plus permissive
+  possible.
+- **Nos propres add-ons sont soumis à la même discipline** que les mods
+  tiers : ils ne passent que par l'API publique. C'est ainsi qu'on vérifie
+  qu'Obol fait bien son travail. Un add-on qui contourne l'API révèle un
+  manque de l'API, à combler dans l'API, pas dans l'add-on. La bourse a
+  fait naître `ObolUi` de cette façon.
+- **Pas une fonction par usage, une fonction bien paramétrée par type
+  d'affichage** qui justifie la sienne : un montant à l'écran
+  (`Obol.show`), un wallet suivi (`Obol.track`), un montant dans une page
+  (`ObolUi.show`), un palier seul dans une page (`ObolUi.show` avec
+  `Denomination`). Les variantes sont des options (`CoinsStyle`), avec un
+  défaut chacune, jamais de nouvelles fonctions.
+
 ## API publique finale (`dev.galysso.obol.api`)
 
 Ce qu'un mod écrit, et rien d'autre :
@@ -66,6 +84,16 @@ public interface Wallet {                          // handle sans état, égalit
     boolean withdraw(Coins amount);                // false = fonds insuffisants, rien n'a bougé
     boolean transferTo(Wallet to, Coins amount);   // false = fonds insuffisants, rien n'a bougé
     void clear();                                  // solde à zéro, Obol oublie l'entrée
+}
+
+public final class ObolUi {                        // ajouté le 2026-09-14, premier consommateur : la bourse
+    public static void show(UICommandBuilder builder, String selector, Coins coins);                    // la pastille du HUD dans un groupe vide de la page, centrée
+    public static void show(UICommandBuilder builder, String selector, Coins coins, CoinsStyle style);
+    public static void show(UICommandBuilder builder, String selector, Denomination tier, long count);  // un seul palier, même à zéro
+    public static void show(UICommandBuilder builder, String selector, Denomination tier, long count, CoinsStyle style);
+}
+
+public record CoinsStyle(Alignment alignment) {    // DEFAULT (CENTER), withAlignment(START | CENTER | END), extensible
 }
 
 public record WalletId(String kind, String key) {  // chacun [a-z0-9_-]+
@@ -385,7 +413,18 @@ n'entre avant qu'un consommateur réel la demande.
   de prix posée sur un autre élément. C'est ce que `CoinsFormat` essayait
   d'être avec une seule valeur légale.
 - **Prix dans la page d'un autre mod** (une grille d'articles, un prix
-  sous chacun). L'UI Hytale n'a pas de coordonnées : un document est un
+  sous chacun). **Fait le 2026-09-14**, sous la forme `ObolUi.show` ci-dessus,
+  quand la bourse a eu besoin d'afficher un montant dans ses popups et sa
+  page : un add-on ne doit jamais dessiner une pièce lui-même. Réalisé sans
+  passer par le backend : `ObolUi` n'envoie que des commandes (`appendInline`
+  d'un `Group #ObolCoins` avec le `LayoutMode` de l'alignement, `append` de
+  `Obol/Coins/<Tier>.ui` par palier, `set` du compte, `setObject` d'un
+  `Anchor` plus large au-delà de deux chiffres), les documents vivent dans
+  le pack d'Obol à côté de ceux du HUD, mêmes tailles (compte 22 px calé à
+  droite sur 30 px, pièce 24 px). `ObolBackendHolder.require()` garde le
+  contrat « IllegalStateException si Obol n'est pas chargé ». Le module
+  `api` a maintenant `compileOnly("com.hypixel.hytale:Server")` depuis
+  `maven.hytale.com/release`, pour cette classe seule. Le texte d'origine : L'UI Hytale n'a pas de coordonnées : un document est un
   arbre de `Group` empilés (`LayoutMode: Left`/`Top`) avec des tailles
   (`Anchor: (Width, Height)`), et on le construit en envoyant des commandes
   à un `UICommandBuilder` (`appendInline(selector, markup)`,

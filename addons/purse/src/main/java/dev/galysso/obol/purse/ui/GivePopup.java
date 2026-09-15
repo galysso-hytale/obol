@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.api.Coins;
+import dev.galysso.obol.api.ObolUi;
 import dev.galysso.obol.purse.PurseOffers;
 
 import java.util.Objects;
@@ -63,7 +64,7 @@ public final class GivePopup extends InteractiveCustomUIPage<GivePopup.Event> {
     public void build(Ref<EntityStore> ref, UICommandBuilder commands, UIEventBuilder events, Store<EntityStore> store) {
         commands.append(DOCUMENT);
         commands.set("#Question.Text", "Hand over to " + receiver.getUsername() + "?");
-        AmountUi.show(commands, "#Amount", amount);
+        ObolUi.show(commands, "#Amount", amount);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#YesButton", EventData.of(Event.ACTION, Event.YES));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#NoButton", EventData.of(Event.ACTION, Event.NO));
     }

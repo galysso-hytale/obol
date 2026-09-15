@@ -16,8 +16,10 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.api.Coins;
+import dev.galysso.obol.api.CoinsStyle;
 import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.Obol;
+import dev.galysso.obol.api.ObolUi;
 import dev.galysso.obol.purse.PurseOps;
 import dev.galysso.obol.purse.api.PurseItem;
 
@@ -28,7 +30,8 @@ import java.util.Objects;
  * The page of a purse held in hand: two panels, the player's balance and
  * the purse's content, each with its total and one row per coin tier, and
  * on each row buttons sending 1 or 10 coins of that tier across to the
- * other panel. Two more buttons move everything either way.
+ * other panel. Two more buttons move everything either way. Every amount
+ * is drawn by Obol ({@link ObolUi}): the page never draws a coin itself.
  *
  * <p>The page remembers where the purse was when it opened (container and
  * slot) and reads the slot again at each click, so a purse moved meanwhile
@@ -47,6 +50,10 @@ public final class PursePage extends InteractiveCustomUIPage<PursePage.Event> {
     private static final String MINE = "#Mine";
     private static final String PURSE = "#Purse";
     private static final int[] STEPS = {1, 10};
+    /** On the balance side the buttons are on the right: the coins pack against them. */
+    private static final CoinsStyle BUTTONS_ON_RIGHT = CoinsStyle.DEFAULT.withAlignment(CoinsStyle.Alignment.END);
+    /** On the purse side the buttons are on the left. */
+    private static final CoinsStyle BUTTONS_ON_LEFT = CoinsStyle.DEFAULT.withAlignment(CoinsStyle.Alignment.START);
 
     private final PurseOps ops;
     private final ItemContainer container;
@@ -74,14 +81,14 @@ public final class PursePage extends InteractiveCustomUIPage<PursePage.Event> {
         ItemStack stack = container.getItemStack(slot);
         boolean held = PurseItem.isPurse(stack);
         Coins content = held ? ops.content(stack) : Coins.ZERO;
-        commands.set(MINE + " #Total.Text", balance.toString());
-        commands.set(PURSE + " #Total.Text", content.toString());
+        ObolUi.show(commands, MINE + " #Total", balance);
+        ObolUi.show(commands, PURSE + " #Total", content);
         Map<Denomination, Long> yours = balance.breakdown();
         Map<Denomination, Long> purse = content.breakdown();
         for (Denomination tier : Denomination.values()) {
             String row = " #" + PurseItem.stateName(tier);
-            commands.set(MINE + row + " #Count.Text", Long.toString(yours.get(tier)));
-            commands.set(PURSE + row + " #Count.Text", Long.toString(purse.get(tier)));
+            ObolUi.show(commands, MINE + row + " #Coins", tier, yours.get(tier), BUTTONS_ON_RIGHT);
+            ObolUi.show(commands, PURSE + row + " #Coins", tier, purse.get(tier), BUTTONS_ON_LEFT);
             for (int step : STEPS) {
                 Coins coins = Coins.of(tier, step);
                 bind(commands, events, MINE + row + " #Put" + step, Action.PUT, tier, step, held && balance.covers(coins));

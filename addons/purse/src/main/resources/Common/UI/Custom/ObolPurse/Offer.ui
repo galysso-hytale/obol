@@ -23,7 +23,7 @@ $C.@PageOverlay {
         Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, Wrap: true, FontSize: 18, TextColor: #ffffff);
       }
 
-      // Filled with Amount.ui by the server.
+      // Filled by the server with Obol's coins (ObolUi.show).
       Group #Amount {
         Anchor: (Height: 24, Bottom: 20);
       }

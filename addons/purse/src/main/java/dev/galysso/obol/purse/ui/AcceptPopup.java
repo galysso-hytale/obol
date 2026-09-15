@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.galysso.obol.api.ObolUi;
 import dev.galysso.obol.purse.PurseOffers;
 
 import java.util.Objects;
@@ -39,7 +40,7 @@ public final class AcceptPopup extends InteractiveCustomUIPage<AcceptPopup.Event
     public void build(Ref<EntityStore> ref, UICommandBuilder commands, UIEventBuilder events, Store<EntityStore> store) {
         commands.append(DOCUMENT);
         commands.set("#Question.Text", offer.giver().getUsername() + " offers you");
-        AmountUi.show(commands, "#Amount", offer.amount());
+        ObolUi.show(commands, "#Amount", offer.amount());
         events.addEventBinding(CustomUIEventBindingType.Activating, "#AcceptButton", EventData.of(Event.ACTION, Event.ACCEPT));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#DeclineButton", EventData.of(Event.ACTION, Event.DECLINE));
     }

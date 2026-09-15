@@ -50,6 +50,8 @@ emptying and handing over are transfers between Obol wallets, with Obol's
 locks, persistence and HUD feed. A cloned stack opens the same wallet, so
 no copy ever doubles the coins. A purse destroyed with coins in it leaves
 its entry in `balances.json`, a few bytes for money that is lost anyway.
+Every amount on screen, in the page and in the popups, is drawn by Obol's
+`ObolUi`: the add-on never draws a coin itself.
 
 `dev.galysso.obol.purse.api.PurseItem` is the way another add-on reads or
 writes a purse (item id and its states, wallet id in the metadata,
