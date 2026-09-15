@@ -10,6 +10,7 @@ run/
 .project
 .settings/
 .vscode
+tmp/
 
 # Written by the dev server through the run/mods/Galysso_obol symlink.
 core/src/main/resources/balances.json
