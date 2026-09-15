@@ -1,0 +1,39 @@
+{
+  "$Comment": "Genere par tmp/lootbag.py, ne pas editer a la main.",
+  "TranslationProperties": {
+    "Name": "server.items.Obol_Lootbag.name",
+    "Description": "server.items.Obol_Lootbag.description"
+  },
+  "Quality": "Template",
+  "Categories": [
+    "Items.Tools"
+  ],
+  "Icon": "Icons/ItemsGenerated/Obol_Lootbag_Common.png",
+  "Model": "Items/Obol/Lootbag_Slack.blockymodel",
+  "Texture": "Items/Obol/Lootbag_Common_Texture.png",
+  "Scale": 0.8,
+  "MaxStack": 50,
+  "PlayerAnimationsId": "Item",
+  "IconProperties": {
+    "Scale": 0.6,
+    "Rotation": [
+      22.5,
+      30.0,
+      10.0
+    ],
+    "Translation": [
+      0.0,
+      -15.0
+    ]
+  },
+  "Tags": {
+    "Type": [
+      "Utility"
+    ],
+    "Family": [
+      "Cloth_Linen"
+    ]
+  },
+  "ItemSoundSetId": "ISS_Items_Leather",
+  "DropOnDeath": true
+}

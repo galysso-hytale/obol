@@ -38,6 +38,19 @@ dependencies {
     }
 }
 
+// LootLaw is plain JDK code plus Obol's Coins: it is unit-tested here, with
+// no server in the loop, like the `api` and `core` modules.
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter("5.13.4")
+            dependencies {
+                implementation(project(":api"))
+            }
+        }
+    }
+}
+
 hytaleTools {
     // hytaleVersion / patchline / manifestGroup are inherited from hytaleWorkspace.
     javaVersion = property("java_version").toString().toInt()

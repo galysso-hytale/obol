@@ -1,0 +1,8 @@
+{
+  "$Comment": "Genere par tmp/lootbag.py, ne pas editer a la main.",
+  "Parent": "Obol_Lootbag",
+  "Quality": "Rare",
+  "Icon": "Icons/ItemsGenerated/Obol_Lootbag_Rare.png",
+  "Model": "Items/Obol/Lootbag_Full.blockymodel",
+  "Texture": "Items/Obol/Lootbag_Rare_Texture.png"
+}

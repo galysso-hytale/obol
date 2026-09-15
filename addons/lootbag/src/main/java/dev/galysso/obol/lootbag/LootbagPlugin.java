@@ -1,8 +1,11 @@
 package dev.galysso.obol.lootbag;
 
+import com.hypixel.hytale.server.core.asset.type.item.config.container.ItemDropContainer;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.util.Config;
+import dev.galysso.obol.lootbag.command.LootbagCommand;
+import dev.galysso.obol.lootbag.drops.LootbagDropContainer;
 
 import javax.annotation.Nonnull;
 import java.nio.file.Files;
@@ -37,6 +40,13 @@ public class LootbagPlugin extends JavaPlugin {
             // Written once with its defaults, so that an admin finds it.
             configFile.save();
         }
+        config.resolve((rarity, problem) ->
+                getLogger().atWarning().log("lootbag.json, Rarities.%s: %s", rarity, problem));
+        // Before the assets are read: the tables that name it are decoded
+        // with the rest of the pack.
+        getCodecRegistry(ItemDropContainer.CODEC)
+                .register(LootbagDropContainer.TYPE, LootbagDropContainer.class, LootbagDropContainer.codec(config));
+        getCommandRegistry().registerCommand(new LootbagCommand(config));
         getLogger().atInfo().log("Lootbag ready (open on %s, amounts %s)",
                 config.openOn().name().toLowerCase(),
                 config.revealAmount() ? "revealed" : "hidden until opened");

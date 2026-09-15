@@ -4,14 +4,22 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
+import com.hypixel.hytale.codec.codecs.map.MapCodec;
+
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * The on-disk shape of {@code lootbag.json}, in the plugin's data directory.
  *
  * <p>A mutable bag of fields, as {@link BuilderCodec} wants. Written with
  * its defaults at first start so that an admin finds it. {@code Rarities}
- * (the amount law of each rarity) and {@code Drops} (the rules that put
- * lootbags into the game's own drop lists) join it with their classes.</p>
+ * is the amount law of each rarity, what a drop container that only names
+ * a rarity writes into the bag and what a bag without a law rolls.
+ * {@code Drops} (the rules that put lootbags into the game's own drop
+ * lists) joins it with its class.</p>
  */
 public final class LootbagConfig {
 
@@ -37,12 +45,74 @@ public final class LootbagConfig {
                     + "Off, the bag shows its range and rolls when opened, and bags of a rarity stack. "
                     + "On, every bag is its own stack.")
             .add()
+            .append(new KeyedCodec<>("Rarities", new MapCodec<>(LootLawSpec.CODEC, LinkedHashMap::new)),
+                    (c, v) -> c.rarities = v, c -> c.rarities)
+            .documentation("The amount law of each rarity (Common, Uncommon, Rare, Epic, Legendary): "
+                    + "Distribution (Uniform, Triangular, LogUniform or Fixed), Min, Max, Mode for Triangular, "
+                    + "Amount for Fixed, and an optional Step. A rarity left out or written wrong keeps its default, "
+                    + "with a line in the log.")
+            .add()
             .build();
 
     OpenOn openOn = OpenOn.Use;
     boolean revealAmount = false;
+    Map<String, LootLawSpec> rarities = defaultRarities();
+
+    /** Resolved once by {@link #resolve}, {@code null} until then. */
+    private Map<Rarity, LootLaw> laws;
 
     public LootbagConfig() {
+    }
+
+    private static Map<String, LootLawSpec> defaultRarities() {
+        Map<String, LootLawSpec> specs = new LinkedHashMap<>();
+        for (Rarity rarity : Rarity.values()) {
+            specs.put(rarity.name(), LootLawSpec.of(LootLaw.defaultFor(rarity)));
+        }
+        return specs;
+    }
+
+    /**
+     * Reads {@code Rarities} into laws, once. A rarity that is missing or
+     * whose law does not hold keeps its default, and {@code problem} is
+     * told why. A key that is no rarity is reported too, and ignored.
+     */
+    public void resolve(BiConsumer<String, String> problem) {
+        Map<Rarity, LootLawSpec> specs = new EnumMap<>(Rarity.class);
+        for (Map.Entry<String, LootLawSpec> entry : (rarities == null ? Map.<String, LootLawSpec>of() : rarities).entrySet()) {
+            Rarity.parse(entry.getKey()).ifPresentOrElse(
+                    rarity -> specs.put(rarity, entry.getValue()),
+                    () -> problem.accept(entry.getKey(), "not a rarity, ignored"));
+        }
+        Map<Rarity, LootLaw> resolved = new EnumMap<>(Rarity.class);
+        for (Rarity rarity : Rarity.values()) {
+            LootLawSpec spec = specs.get(rarity);
+            LootLaw law = LootLaw.defaultFor(rarity);
+            if (spec == null) {
+                problem.accept(rarity.name(), "missing, using " + law);
+            } else {
+                try {
+                    law = spec.toLaw();
+                } catch (IllegalArgumentException e) {
+                    problem.accept(rarity.name(), e.getMessage() + ", using " + law);
+                }
+            }
+            resolved.put(rarity, law);
+        }
+        laws = resolved;
+    }
+
+    /**
+     * {@return the amount law of {@code rarity}, from {@code Rarities} or
+     * its default}
+     *
+     * @throws IllegalStateException before {@link #resolve} has run
+     */
+    public LootLaw law(Rarity rarity) {
+        if (laws == null) {
+            throw new IllegalStateException("Rarities not resolved yet");
+        }
+        return laws.get(rarity);
     }
 
     /** {@return when a lootbag is credited to the balance} */
