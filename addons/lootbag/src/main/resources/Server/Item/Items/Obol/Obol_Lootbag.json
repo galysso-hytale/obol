@@ -44,7 +44,7 @@
           "Type": "Simple",
           "RunTime": 0,
           "Effects": {
-            "WorldSoundEventId": "SFX_Obol_Lootbag_Open"
+            "LocalSoundEventId": "SFX_Obol_Lootbag_Open"
           }
         }
       ]
