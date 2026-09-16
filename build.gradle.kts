@@ -5,7 +5,7 @@ plugins {
 hytaleWorkspace {
     // The loadable Hytale plugins: Obol itself and its add-ons. `api` is a
     // plain library module.
-    modProjects = listOf(":core", ":addons:purse", ":addons:lootbag")
+    modProjects = listOf(":core", ":addons:purse", ":addons:lootbag", ":addons:trade")
     hostProject = ":core"
 
     // Shared defaults inherited by every `hytaleTools` project.

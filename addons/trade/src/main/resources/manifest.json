@@ -1,0 +1,25 @@
+{
+    "Group": "Galysso",
+    "Name": "obol-trade",
+    "Version": "0.1.0",
+    "Description": "Player-to-player trading of items and coins.",
+    "Authors": [
+        {
+            "Name": "Galysso"
+        }
+    ],
+    "Website": "https://github.com/galysso/obol",
+    "ServerVersion": ">=0.6.0 <0.7.0",
+    "Dependencies": {
+        "Galysso:obol": ">=0.2.0"
+    },
+    "OptionalDependencies": {
+        "Galysso:hail": ">=0.1.0"
+    },
+    "DisabledByDefault": false,
+    "Main": "dev.galysso.obol.trade.TradePlugin",
+    "IncludesAssetPack": true,
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}

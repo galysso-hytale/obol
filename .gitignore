@@ -23,3 +23,7 @@ addons/purse/src/main/resources/purse.json.bak
 # Written by the dev server through the run/mods/Galysso_obol-lootbag symlink.
 addons/lootbag/src/main/resources/lootbag.json
 addons/lootbag/src/main/resources/lootbag.json.bak
+
+# Written by the dev server through the run/mods/Galysso_obol-trade symlink.
+addons/trade/src/main/resources/trade.json
+addons/trade/src/main/resources/trade.json.bak
