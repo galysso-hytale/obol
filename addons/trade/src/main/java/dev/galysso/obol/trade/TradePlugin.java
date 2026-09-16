@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.util.Config;
+import dev.galysso.obol.trade.fallback.FallbackHook;
 import dev.galysso.obol.trade.hail.HailBridge;
 import dev.galysso.obol.trade.trade.TradeSessions;
 
@@ -31,7 +32,9 @@ public class TradePlugin extends JavaPlugin {
     private static final PluginIdentifier HAIL = new PluginIdentifier("Galysso", "hail");
 
     private final Config<TradeConfig> configFile;
-    private AutoCloseable hailEntry;
+    /** Hail's registration or the {@link FallbackHook}, whichever was installed. */
+    private AutoCloseable hook;
+    private boolean viaHail;
 
     public TradePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -47,13 +50,18 @@ public class TradePlugin extends JavaPlugin {
             configFile.save();
         }
         TradeSessions sessions = new TradeSessions(getLogger(), config);
+        // In both modes: the step type must exist before our pack decodes.
+        FallbackHook fallback = FallbackHook.prepare(this, sessions);
 
         if (hailPresent()) {
-            hailEntry = HailBridge.register(sessions, getLogger());
+            hook = HailBridge.register(sessions, getLogger());
+            viaHail = hook != null;
         }
-        if (hailEntry != null) {
+        if (viaHail) {
             getLogger().atInfo().log("Hail present, Trade sits in its menu as %s", HailBridge.ID);
         } else {
+            // Hail missing, or loaded without its API: F on a player is ours.
+            hook = fallback.hookPlayers();
             getLogger().atInfo().log("Hail absent, F opens the trade directly");
         }
         getLogger().atInfo().log("Trade ready (requests open %d s, max distance %.1f, %d offer slots, accept delay %d s)",
@@ -63,15 +71,17 @@ public class TradePlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
-        if (hailEntry == null) {
+        if (hook == null) {
             return;
         }
         try {
-            hailEntry.close();
+            hook.close();
         } catch (Exception e) {
-            getLogger().atWarning().withCause(e).log("Could not withdraw %s from Hail's menu", HailBridge.ID);
+            getLogger().atWarning().withCause(e).log(viaHail
+                    ? "Could not withdraw %s from Hail's menu"
+                    : "Could not remove the F hook from the players", HailBridge.ID);
         }
-        hailEntry = null;
+        hook = null;
     }
 
     /**

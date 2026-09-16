@@ -1,0 +1,38 @@
+{
+  "Settings": {
+    "Adventure": {
+      "Cooldown": {
+        "Id": "BlockInteraction",
+        "Cooldown": 0.35
+      }
+    },
+    "Creative": {
+      "Cooldown": {
+        "Id": "BlockInteraction_Creative",
+        "Cooldown": 0.35,
+        "ClickBypass": true
+      }
+    }
+  },
+  "Interactions": [
+    {
+      "Type": "ObolTradeUse",
+      "Failed": {
+        "Type": "Simple",
+        "Effects": {
+          "ItemAnimationId": "Interact"
+        },
+        "Next": {
+          "Type": "UseBlock",
+          "Failed": {
+            "Type": "UseEntity",
+            "Failed": {
+              "Type": "BreakBlock",
+              "Harvest": true
+            }
+          }
+        }
+      }
+    }
+  ]
+}
