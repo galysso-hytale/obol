@@ -41,10 +41,21 @@
       "RequireNewClick": true,
       "Interactions": [
         {
-          "Type": "Simple",
-          "RunTime": 0,
-          "Effects": {
-            "LocalSoundEventId": "SFX_Obol_Lootbag_Open"
+          "Type": "Condition",
+          "Crouching": true,
+          "Next": {
+            "Type": "ObolOpenLootbag",
+            "All": true,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open"
+            }
+          },
+          "Failed": {
+            "Type": "ObolOpenLootbag",
+            "All": false,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open"
+            }
           }
         }
       ]

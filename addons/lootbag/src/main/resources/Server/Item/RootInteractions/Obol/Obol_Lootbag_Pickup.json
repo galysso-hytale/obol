@@ -1,0 +1,9 @@
+{
+  "$Comment": "Genere par tmp/lootbag.py, ne pas editer a la main.",
+  "Interactions": [
+    {
+      "Type": "ObolOpenLootbag",
+      "OnItemChangeBehavior": "Ignore"
+    }
+  ]
+}
