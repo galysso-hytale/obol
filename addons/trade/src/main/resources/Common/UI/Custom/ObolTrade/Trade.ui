@@ -1,0 +1,104 @@
+// The trade page (TradePage), the same on both sides: my offer on the
+// left (#Mine), the other's on the right (#Theirs), Accept under mine,
+// the other's status under theirs, Cancel below. For now both panels are
+// empty placeholders: the grids, the coins and Accept come with the next
+// increment. The server sets #Heading, "#Theirs #Caption" and
+// #TheirStatus, and binds #CancelButton.
+$C = "../Common.ui";
+$Sounds = "../Sounds.ui";
+
+@Caption = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, HorizontalAlignment: Center, RenderUppercase: true, RenderBold: true, FontSize: 13);
+@Muted = (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, Wrap: true, TextColor: #ffffff(0.5));
+
+$C.@PageOverlay {
+  LayoutMode: Middle;
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 568);
+
+    #Title {
+      $C.@Title {
+        @Text = "Trade";
+      }
+    }
+
+    #Content {
+      Padding: (Vertical: 24, Horizontal: 32);
+
+      Label #Heading {
+        Anchor: (Bottom: 12);
+        Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, FontSize: 18, TextColor: #ffffff);
+      }
+
+      Group {
+        LayoutMode: Left;
+        Anchor: (Bottom: 12);
+
+        // Left: what I offer.
+        Group #Mine {
+          LayoutMode: Top;
+          FlexWeight: 1;
+          Background: (Color: #000000(0.15));
+          Padding: (Full: 8);
+
+          Label #Caption {
+            Text: "Your offer";
+            Anchor: (Height: 18, Bottom: 8);
+            Style: @Caption;
+          }
+
+          Label {
+            Text: "Nothing yet";
+            Anchor: (Height: 60);
+            Style: @Muted;
+          }
+
+          $C.@TextButton #AcceptButton {
+            @Sounds = $Sounds.@SaveSettings;
+            Text: "Accept";
+          }
+        }
+
+        Group {
+          Anchor: (Width: 12);
+        }
+
+        // Right: what the other offers.
+        Group #Theirs {
+          LayoutMode: Top;
+          FlexWeight: 1;
+          Background: (Color: #000000(0.15));
+          Padding: (Full: 8);
+
+          Label #Caption {
+            Anchor: (Height: 18, Bottom: 8);
+            Style: @Caption;
+          }
+
+          Label {
+            Text: "Nothing yet";
+            Anchor: (Height: 60);
+            Style: @Muted;
+          }
+
+          Label #TheirStatus {
+            Anchor: (Height: $C.@DefaultButtonHeight);
+            Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, VerticalAlignment: Center, TextColor: #ffcc00);
+          }
+        }
+      }
+
+      Group {
+        LayoutMode: Center;
+
+        $C.@SecondaryTextButton #CancelButton {
+          @Sounds = $Sounds.@ButtonsCancel;
+          Text: "Cancel";
+          FlexWeight: 1;
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

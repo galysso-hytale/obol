@@ -1,0 +1,40 @@
+// What the asker sees while the other decides (WaitingPage): "Waiting for
+// X to answer...", Cancel. #Question is set by the server. Closing the
+// page any other way withdraws the request.
+$C = "../Common.ui";
+$Sounds = "../Sounds.ui";
+
+$C.@PageOverlay {
+  LayoutMode: Middle;
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 420);
+
+    #Title {
+      $C.@Title {
+        @Text = "Trade";
+      }
+    }
+
+    #Content {
+      Padding: (Vertical: 24, Horizontal: 32);
+
+      Label #Question {
+        Anchor: (Bottom: 20);
+        Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, Wrap: true, FontSize: 18, TextColor: #ffffff);
+      }
+
+      Group {
+        LayoutMode: Center;
+
+        $C.@SecondaryTextButton #CancelButton {
+          @Sounds = $Sounds.@ButtonsCancel;
+          Text: "Cancel";
+          FlexWeight: 1;
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

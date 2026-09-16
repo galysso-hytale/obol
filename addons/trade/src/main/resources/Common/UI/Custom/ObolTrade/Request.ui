@@ -1,0 +1,48 @@
+// What the asked player sees (RequestPage): "X proposes a trade.",
+// Accept / Decline. #Question is set by the server. Closing the page any
+// other way declines.
+$C = "../Common.ui";
+$Sounds = "../Sounds.ui";
+
+$C.@PageOverlay {
+  LayoutMode: Middle;
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 420);
+
+    #Title {
+      $C.@Title {
+        @Text = "Trade";
+      }
+    }
+
+    #Content {
+      Padding: (Vertical: 24, Horizontal: 32);
+
+      Label #Question {
+        Anchor: (Bottom: 20);
+        Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, Wrap: true, FontSize: 18, TextColor: #ffffff);
+      }
+
+      Group {
+        LayoutMode: Center;
+
+        $C.@TextButton #AcceptButton {
+          @Sounds = $Sounds.@SaveSettings;
+          @Anchor = (Right: 4);
+          Text: "Accept";
+          FlexWeight: 1;
+        }
+
+        $C.@SecondaryTextButton #DeclineButton {
+          @Sounds = $Sounds.@ButtonsCancel;
+          @Anchor = (Left: 4);
+          Text: "Decline";
+          FlexWeight: 1;
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

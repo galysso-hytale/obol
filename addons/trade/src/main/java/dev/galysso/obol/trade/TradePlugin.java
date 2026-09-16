@@ -2,9 +2,12 @@ package dev.galysso.obol.trade;
 
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.semver.SemverRange;
+import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.RemovedPlayerFromWorldEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.util.Config;
 import dev.galysso.obol.trade.fallback.FallbackHook;
 import dev.galysso.obol.trade.hail.HailBridge;
@@ -32,6 +35,7 @@ public class TradePlugin extends JavaPlugin {
     private static final PluginIdentifier HAIL = new PluginIdentifier("Galysso", "hail");
 
     private final Config<TradeConfig> configFile;
+    private TradeSessions sessions;
     /** Hail's registration or the {@link FallbackHook}, whichever was installed. */
     private AutoCloseable hook;
     private boolean viaHail;
@@ -49,7 +53,16 @@ public class TradePlugin extends JavaPlugin {
             // Written once with its defaults, so that an admin finds it.
             configFile.save();
         }
-        TradeSessions sessions = new TradeSessions(getLogger(), config);
+        sessions = new TradeSessions(getLogger(), config);
+        // A player who leaves the world or the server leaves their trade too.
+        getEventRegistry().register(PlayerDisconnectEvent.class,
+                event -> sessions.playerLeft(event.getPlayerRef().getUuid()));
+        getEventRegistry().registerGlobal(RemovedPlayerFromWorldEvent.class, event -> {
+            PlayerRef player = event.getHolder().getComponent(PlayerRef.getComponentType());
+            if (player != null) {
+                sessions.playerLeft(player.getUuid());
+            }
+        });
         // In both modes: the step type must exist before our pack decodes.
         FallbackHook fallback = FallbackHook.prepare(this, sessions);
 
@@ -71,6 +84,9 @@ public class TradePlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
+        if (sessions != null) {
+            sessions.closeAll();
+        }
         if (hook == null) {
             return;
         }
