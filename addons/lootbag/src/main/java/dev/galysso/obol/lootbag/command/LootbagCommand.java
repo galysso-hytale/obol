@@ -25,6 +25,7 @@ import dev.galysso.obol.lootbag.api.LootbagItem;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * {@code /lootbag}, a testing aid, not the way players get bags (they loot
@@ -32,9 +33,10 @@ import java.util.List;
  * {@code hytale:Admin} by default.
  *
  * <ul>
- *   <li>{@code give <rarity> [count] [law]}: bags in the sender's
- *   inventory, carrying the rarity's law or the one written after the
- *   count ({@code 5g}, {@code uniform 1g 5g}, see {@link LootLaw#parse}).</li>
+ *   <li>{@code give <rarity> [--count=n] [--law=...]}: bags in the sender's
+ *   inventory, carrying the rarity's law or the one written
+ *   ({@code 5g}, {@code uniform 1g 5g}, see {@link LootLaw#parse}). With
+ *   {@code RevealAmount} on, rolled here like a drop: one stack per bag.</li>
  *   <li>{@code roll <droplist> [count]}: rolls a drop table and gives what
  *   falls, to see a table's bags with their tooltip.</li>
  *   <li>{@code rarities}: the law of each rarity, as {@code lootbag.json}
@@ -119,8 +121,18 @@ public final class LootbagCommand extends CommandBase {
                     return;
                 }
             }
-            ItemStack bags = LootbagItem.stack(wanted, chosen, quantity, config.openOn());
-            give(context, store, ref, List.of(bags), wanted.lower() + (quantity == 1 ? " lootbag" : " lootbags"));
+            List<ItemStack> bags = new ArrayList<>();
+            if (config.revealAmount() && !chosen.isFixed()) {
+                // As the drop container does: rolled now, each bag says
+                // its amount, and so is its own stack.
+                for (int i = 0; i < quantity; i++) {
+                    LootLaw rolled = LootLaw.fixed(chosen.roll(ThreadLocalRandom.current()::nextDouble));
+                    bags.add(LootbagItem.stack(wanted, rolled, 1, config.openOn()));
+                }
+            } else {
+                bags.add(LootbagItem.stack(wanted, chosen, quantity, config.openOn()));
+            }
+            give(context, store, ref, bags, wanted.lower() + (quantity == 1 ? " lootbag" : " lootbags"));
         }
     }
 

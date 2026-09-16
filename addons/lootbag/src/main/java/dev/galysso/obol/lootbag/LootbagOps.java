@@ -12,6 +12,8 @@ import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.Obol;
 import dev.galysso.obol.lootbag.api.LootbagItem;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,13 +23,15 @@ import java.util.concurrent.ThreadLocalRandom;
  * What opening lootbags does: roll their law and put the coins in the
  * player's balance.
  *
- * <p>Two entries. {@link #open} is the click: it takes the bags out of
+ * <p>Three entries. {@link #open} is the click: it takes the bags out of
  * their slot first, then credits, so that no coin exists without bags
- * gone. {@link #credit} is the pickup: the game removes the item itself
- * (the item entity on the ground, the stack a harvest hands over), so
- * only the roll and the deposit are left. Both roll once per bag and make
- * one deposit of the sum, which is one line in Obol's HUD feed. Nothing
- * is said in the chat.</p>
+ * gone. {@link #openAll} does the same for every stack of bags of a
+ * container (the crouched click on a bag with a fixed amount, the
+ * inventory sweep), still as one deposit. {@link #credit} is the pickup: the game
+ * removes the item itself (the item entity on the ground, the stack a
+ * harvest hands over), so only the roll and the deposit are left. All
+ * roll once per bag and make one deposit of the sum, which is one line
+ * in Obol's HUD feed. Nothing is said in the chat.</p>
  *
  * <p>A bag without a law (made by hand, or by a {@code Single} drop) rolls
  * the law its rarity has in {@code lootbag.json}, as its tooltip says.</p>
@@ -85,13 +89,54 @@ public final class LootbagOps {
         if (!removal.succeeded()) {
             return Outcome.NOTHING;
         }
+        return deposit(player, sum, opened, List.of(new Removed(container, slot, expected.withQuantity(opened))));
+    }
+
+    /**
+     * Opens every stack of bags {@code container} holds (a player's
+     * combined inventory), as one deposit. A stack whose removal fails is
+     * skipped, the others still open.
+     *
+     * @return what happened, {@link Outcome#ok} false when the container
+     *         held no bag or the deposit failed
+     */
+    public Outcome openAll(ItemContainer container, UUID player) {
+        List<Removed> removed = new ArrayList<>();
+        Coins sum = Coins.ZERO;
+        int opened = 0;
+        for (short slot = 0; slot < container.getCapacity(); slot++) {
+            ItemStack stack = container.getItemStack(slot);
+            Optional<LootLaw> law = lawOf(stack);
+            if (law.isEmpty()) {
+                continue;
+            }
+            int count = stack.getQuantity();
+            if (!container.removeItemStackFromSlot(slot, stack, count).succeeded()) {
+                continue;
+            }
+            removed.add(new Removed(container, slot, stack));
+            sum = sum.plus(law.get().rollSum(count, ThreadLocalRandom.current()::nextDouble));
+            opened += count;
+        }
+        if (removed.isEmpty()) {
+            return Outcome.NOTHING;
+        }
+        return deposit(player, sum, opened, removed);
+    }
+
+    /** A stack taken out, to put back if the deposit fails. */
+    private record Removed(ItemContainer container, short slot, ItemStack stack) {
+    }
+
+    private Outcome deposit(UUID player, Coins sum, int opened, List<Removed> removed) {
         try {
             Obol.playerWallet(player).deposit(sum);
         } catch (RuntimeException e) {
             // Obol's store refused: the bags come back, nothing is lost.
-            container.addItemStackToSlot(slot, expected.withQuantity(opened));
-            logger.atSevere().withCause(e).log("Could not credit %s for %d lootbag(s) of %s, bags returned",
-                    player, opened, expected.getItemId());
+            for (Removed r : removed) {
+                r.container().addItemStackToSlot(r.slot(), r.stack());
+            }
+            logger.atSevere().withCause(e).log("Could not credit %s for %d lootbag(s), bags returned", player, opened);
             return Outcome.NOTHING;
         }
         return new Outcome(true, sum, opened);

@@ -34,9 +34,10 @@ import java.util.Optional;
  *
  * <p>The stack also carries the tooltip the client shows, as display
  * metadata: the name, and a description that says the range of the law in
- * words ("Holds 5 to 50 silver.") followed by how the bag opens. Both
- * documents are written once, by {@link #metadata}, and deterministically:
- * two bags of the same law and mode are the same stack.</p>
+ * words ("Holds 5 to 50 silver.") followed by how the bag opens on this
+ * server. Both documents are written once, by {@link #metadata}, and
+ * deterministically: two bags of the same law and mode are the same
+ * stack.</p>
  *
  * <p>A bag with no law at all (an item made by hand, or a {@code Single}
  * drop that names a lootbag item without going through the
@@ -59,10 +60,26 @@ public final class LootbagItem {
     public static final String METADATA_KEY = "obol.lootbag";
 
     private static final String NAME = "Lootbag";
-    private static final String HINT_USE = "Right-click to open one, crouch and right-click to open them all.";
+    private static final String HINT_USE_STACK =
+            "Right-click to open one bag, crouch and right-click to open the whole stack.";
+    private static final String HINT_USE_ALL =
+            "Right-click to open it, crouch and right-click to open every lootbag you carry.";
     private static final String HINT_PICKUP = "Goes straight into your balance when you take it.";
 
     private LootbagItem() {
+    }
+
+    /**
+     * {@return whether a crouched click on a bag of {@code law} opens every
+     * bag carried rather than the held stack}
+     * A fixed amount is what {@code RevealAmount} writes, and such bags
+     * only stack with bags of the same amount: "the stack" would often be
+     * one bag, so the crouch opens the inventory instead. A range is what
+     * stacks by rarity, and the crouch opens that stack. Written in the
+     * tooltip, read at the click: the rule travels with the bag.
+     */
+    public static boolean crouchOpensAll(LootLaw law) {
+        return Objects.requireNonNull(law, "law").isFixed();
     }
 
     /** {@return whether the stack is a lootbag of any rarity} */
@@ -149,12 +166,19 @@ public final class LootbagItem {
      * <p>Deterministic: same law and mode, same document, key for key and
      * byte for byte. What the {@code ObolLootbag} drop container hands to
      * its {@code ItemDrop}.</p>
+     *
+     * <p>The tooltip's last sentence says what a crouched click does, and
+     * that follows the bag, not the server's settings, so that it stays
+     * true after a change of {@code lootbag.json}: a bag with a fixed
+     * amount ({@link #crouchOpensAll}) opens every bag carried, a bag with
+     * a range opens its stack.</p>
      */
     public static BsonDocument metadata(LootLaw law, OpenOn openOn) {
         Objects.requireNonNull(law, "law");
         Objects.requireNonNull(openOn, "openOn");
+        String hint = openOn == OpenOn.Pickup ? HINT_PICKUP : crouchOpensAll(law) ? HINT_USE_ALL : HINT_USE_STACK;
         ItemDisplayMetadata display = new ItemDisplayMetadata(Message.raw(NAME),
-                Message.join(holds(law), Message.raw(". " + (openOn == OpenOn.Pickup ? HINT_PICKUP : HINT_USE))));
+                Message.join(holds(law), Message.raw(". " + hint)));
         BsonDocument metadata = new BsonDocument();
         metadata.put(METADATA_KEY, lawValue(law));
         ItemDisplayMetadata.KEYED_CODEC.put(metadata, display);

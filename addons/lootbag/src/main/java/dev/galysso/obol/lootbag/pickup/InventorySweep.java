@@ -9,12 +9,10 @@ import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
-import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.lootbag.LootbagOps;
-import dev.galysso.obol.lootbag.api.LootbagItem;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -26,8 +24,8 @@ import java.util.Objects;
  * <p>{@link InventoryChangeEvent} is sent on the world thread for every
  * change of a player's hotbar, storage, backpack or armour (the event the
  * objectives use for "collect 10 of X"). On each, the combined inventory
- * is walked, and every stack of bags is opened whole with
- * {@link LootbagOps#open}, which takes them out first. That is where a
+ * is walked by {@link LootbagOps#openAll}, which takes every stack of
+ * bags out first and makes one deposit. That is where a
  * gift, {@code /lootbag give}, a mod's {@code giveItem} or a bag that
  * escaped the ground and the chest end up. The removal queues a change
  * of its own, which finds nothing on the next tick: the events are
@@ -51,15 +49,8 @@ public final class InventorySweep extends EntityEventSystem<EntityStore, Invento
             return;
         }
         Ref<EntityStore> ref = chunk.getReferenceTo(index);
-        CombinedItemContainer inventory = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.HOTBAR_FIRST);
-        boolean opened = false;
-        for (short slot = 0; slot < inventory.getCapacity(); slot++) {
-            ItemStack stack = inventory.getItemStack(slot);
-            if (LootbagItem.isLootbag(stack)) {
-                opened |= ops.open(inventory, slot, stack, player.getUuid(), stack.getQuantity()).ok();
-            }
-        }
-        if (opened) {
+        CombinedItemContainer inventory = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
+        if (ops.openAll(inventory, player.getUuid()).ok()) {
             LootbagOps.chime(player);
         }
     }
