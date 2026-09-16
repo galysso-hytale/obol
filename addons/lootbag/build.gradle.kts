@@ -38,14 +38,17 @@ dependencies {
     }
 }
 
-// LootLaw is plain JDK code plus Obol's Coins: it is unit-tested here, with
-// no server in the loop, like the `api` and `core` modules.
+// LootLaw is plain JDK code plus Obol's Coins, and DropRule only builds
+// BSON documents: both are unit-tested here with no server running, like
+// the `api` and `core` modules. The server jar is on the test classpath
+// for its codec and BSON classes, never started.
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter("5.13.4")
             dependencies {
                 implementation(project(":api"))
+                implementation("com.hypixel.hytale:Server:0.+")
             }
         }
     }

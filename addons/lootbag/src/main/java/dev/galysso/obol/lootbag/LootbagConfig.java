@@ -18,8 +18,8 @@ import java.util.function.BiConsumer;
  * its defaults at first start so that an admin finds it. {@code Rarities}
  * is the amount law of each rarity, what a drop container that only names
  * a rarity writes into the bag and what a bag without a law rolls.
- * {@code Drops} (the rules that put lootbags into the game's own drop
- * lists) joins it with its class.</p>
+ * Where the bags fall is another file, {@code drops.json}
+ * ({@link DropsConfig}).</p>
  */
 public final class LootbagConfig {
 
@@ -75,26 +75,27 @@ public final class LootbagConfig {
     /**
      * Reads {@code Rarities} into laws, once. A rarity that is missing or
      * whose law does not hold keeps its default, and {@code problem} is
-     * told why. A key that is no rarity is reported too, and ignored.
+     * told why, with the key. A key that is no rarity is reported too,
+     * and ignored.
      */
     public void resolve(BiConsumer<String, String> problem) {
         Map<Rarity, LootLawSpec> specs = new EnumMap<>(Rarity.class);
         for (Map.Entry<String, LootLawSpec> entry : (rarities == null ? Map.<String, LootLawSpec>of() : rarities).entrySet()) {
             Rarity.parse(entry.getKey()).ifPresentOrElse(
                     rarity -> specs.put(rarity, entry.getValue()),
-                    () -> problem.accept(entry.getKey(), "not a rarity, ignored"));
+                    () -> problem.accept("Rarities." + entry.getKey(), "not a rarity, ignored"));
         }
         Map<Rarity, LootLaw> resolved = new EnumMap<>(Rarity.class);
         for (Rarity rarity : Rarity.values()) {
             LootLawSpec spec = specs.get(rarity);
             LootLaw law = LootLaw.defaultFor(rarity);
             if (spec == null) {
-                problem.accept(rarity.name(), "missing, using " + law);
+                problem.accept("Rarities." + rarity.name(), "missing, using " + law);
             } else {
                 try {
                     law = spec.toLaw();
                 } catch (IllegalArgumentException e) {
-                    problem.accept(rarity.name(), e.getMessage() + ", using " + law);
+                    problem.accept("Rarities." + rarity.name(), e.getMessage() + ", using " + law);
                 }
             }
             resolved.put(rarity, law);

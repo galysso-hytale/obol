@@ -9,9 +9,13 @@ every player (and anything else that should hold coins), an API to move
 them, and a readable display of the result.
 
 - Just a currency. No shops, taxes or jobs: what Obol does to your server
-  is what the mods built on it do; gameplay belongs to add-ons. The first
-  one, [Obol Purse](addons/purse/README.md), is a craftable purse that
-  carries coins from hand to hand, chest or floor.
+  is what the mods built on it do; gameplay belongs to add-ons. Two come
+  with it: [Obol Purse](addons/purse/README.md), a craftable purse that
+  carries coins from hand to hand, chest or floor, and
+  [Obol Lootbag](addons/lootbag/README.md), bags of coins found in
+  dungeon chests and on creatures, in the game's five rarities, that go
+  into the balance when opened. Where they fall and how much they hold
+  is the server's to set, or a pack's.
 - Four coins, copper to mythril, so 1 <img src="core/src/main/resources/Common/UI/Custom/Obol/Mythril.png" alt="mythril" height="16" align="absmiddle"> 2 <img src="core/src/main/resources/Common/UI/Custom/Obol/Gold.png" alt="gold" height="16" align="absmiddle"> 35 <img src="core/src/main/resources/Common/UI/Custom/Obol/Silver.png" alt="silver" height="16" align="absmiddle"> 4 <img src="core/src/main/resources/Common/UI/Custom/Obol/Copper.png" alt="copper" height="16" align="absmiddle"> reads at a glance.
 
 ## Players and server owners
@@ -262,7 +266,7 @@ resources` is the asset pack (`Common/UI/Custom/Obol/<Tier>.{ui,png}` for
 the HUD, `Obol/Coins/<Tier>.ui` for `ObolUi`; the 64×64 originals are in
 `tmp/`). Identity and versions live in
 `gradle.properties`; `manifest.json` is generated from it. Add-ons are
-sub-projects under `addons/` (`addons/purse`), each a plugin of its own with
+sub-projects under `addons/` (`addons/purse`, `addons/lootbag`), each a plugin of its own with
 its own version, built and run alone or with everything else
 (`./gradlew runAllMods`).
 

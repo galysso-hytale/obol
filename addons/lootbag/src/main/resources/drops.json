@@ -1,0 +1,73 @@
+{
+  "Rules": [
+    {
+      "Droplists": [
+        "Prefabs/Zone*_Encounters_Tier1"
+      ],
+      "Chance": 30,
+      "Bags": {
+        "Common": 70,
+        "Uncommon": 25,
+        "Rare": 5
+      }
+    },
+    {
+      "Droplists": [
+        "Prefabs/Zone*_Encounters_Tier2"
+      ],
+      "Chance": 35,
+      "Bags": {
+        "Common": 40,
+        "Uncommon": 40,
+        "Rare": 17,
+        "Epic": 3
+      }
+    },
+    {
+      "Droplists": [
+        "Prefabs/Zone*_Encounters_Tier3"
+      ],
+      "Chance": 40,
+      "Bags": {
+        "Uncommon": 40,
+        "Rare": 40,
+        "Epic": 17,
+        "Legendary": 3
+      }
+    },
+    {
+      "Droplists": [
+        "Prefabs/Zone*_Encounters_Tier4"
+      ],
+      "Chance": 50,
+      "Bags": {
+        "Rare": 45,
+        "Epic": 40,
+        "Legendary": 15
+      }
+    },
+    {
+      "Droplists": [
+        "NPCs/Undead/*",
+        "NPCs/Intelligent/Goblin/*",
+        "NPCs/Intelligent/Trork/*",
+        "NPCs/Intelligent/Outlander/*"
+      ],
+      "Chance": 33,
+      "Bags": {
+        "Common": 85,
+        "Uncommon": 15
+      }
+    },
+    {
+      "Droplists": [
+        "NPCs/Boss/*"
+      ],
+      "Chance": 100,
+      "Rarity": "Legendary",
+      "Distribution": "Uniform",
+      "Min": "20g",
+      "Max": "50g"
+    }
+  ]
+}

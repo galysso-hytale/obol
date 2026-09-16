@@ -42,9 +42,6 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public final class LootbagOps {
 
-    /** The sound event of the pack played when bags open, whatever the path. */
-    public static final String SOUND_EVENT = "SFX_Obol_Lootbag_Open";
-
     private final LootbagConfig config;
     private final HytaleLogger logger;
 
@@ -59,10 +56,12 @@ public final class LootbagOps {
      * @param ok     whether coins were credited
      * @param amount how many, {@link Coins#ZERO} when none were
      * @param count  how many bags opened
+     * @param rarity the highest rarity among the bags opened, what the
+     *               opening sounds like, {@code null} when none did
      */
-    public record Outcome(boolean ok, Coins amount, int count) {
+    public record Outcome(boolean ok, Coins amount, int count, Rarity rarity) {
 
-        static final Outcome NOTHING = new Outcome(false, Coins.ZERO, 0);
+        static final Outcome NOTHING = new Outcome(false, Coins.ZERO, 0, null);
     }
 
     /**
@@ -89,7 +88,8 @@ public final class LootbagOps {
         if (!removal.succeeded()) {
             return Outcome.NOTHING;
         }
-        return deposit(player, sum, opened, List.of(new Removed(container, slot, expected.withQuantity(opened))));
+        return deposit(player, sum, opened, List.of(new Removed(container, slot, expected.withQuantity(opened))),
+                LootbagItem.rarity(expected).orElseThrow());
     }
 
     /**
@@ -104,6 +104,7 @@ public final class LootbagOps {
         List<Removed> removed = new ArrayList<>();
         Coins sum = Coins.ZERO;
         int opened = 0;
+        Rarity highest = null;
         for (short slot = 0; slot < container.getCapacity(); slot++) {
             ItemStack stack = container.getItemStack(slot);
             Optional<LootLaw> law = lawOf(stack);
@@ -117,18 +118,21 @@ public final class LootbagOps {
             removed.add(new Removed(container, slot, stack));
             sum = sum.plus(law.get().rollSum(count, ThreadLocalRandom.current()::nextDouble));
             opened += count;
+            // One sound for the lot, that of the best bag in it.
+            Rarity rarity = LootbagItem.rarity(stack).orElseThrow();
+            highest = highest == null || rarity.compareTo(highest) > 0 ? rarity : highest;
         }
         if (removed.isEmpty()) {
             return Outcome.NOTHING;
         }
-        return deposit(player, sum, opened, removed);
+        return deposit(player, sum, opened, removed, highest);
     }
 
     /** A stack taken out, to put back if the deposit fails. */
     private record Removed(ItemContainer container, short slot, ItemStack stack) {
     }
 
-    private Outcome deposit(UUID player, Coins sum, int opened, List<Removed> removed) {
+    private Outcome deposit(UUID player, Coins sum, int opened, List<Removed> removed, Rarity rarity) {
         try {
             Obol.playerWallet(player).deposit(sum);
         } catch (RuntimeException e) {
@@ -139,7 +143,7 @@ public final class LootbagOps {
             logger.atSevere().withCause(e).log("Could not credit %s for %d lootbag(s), bags returned", player, opened);
             return Outcome.NOTHING;
         }
-        return new Outcome(true, sum, opened);
+        return new Outcome(true, sum, opened, rarity);
     }
 
     /**
@@ -165,7 +169,7 @@ public final class LootbagOps {
                     player, opened, stack.getItemId());
             return Outcome.NOTHING;
         }
-        return new Outcome(true, sum, opened);
+        return new Outcome(true, sum, opened, LootbagItem.rarity(stack).orElseThrow());
     }
 
     /** {@return the law of the stack, its own or its rarity's, empty when it is not a lootbag} */
@@ -178,12 +182,17 @@ public final class LootbagOps {
     }
 
     /**
-     * Plays the opening sound to {@code player} alone, for the paths the
-     * client does not run itself (pickup, chest): the same
-     * {@link #SOUND_EVENT} the click plays through its {@code Effects}.
+     * Plays the opening sound of {@code outcome} to {@code player} alone,
+     * for the paths the client does not run itself (pickup, chest, sweep):
+     * the sound of the best bag opened ({@link Rarity#soundEvent}), the
+     * one the click plays through the item's {@code Effects}. Nothing when
+     * {@code outcome} opened no bag.
      */
-    public static void chime(PlayerRef player) {
-        int index = SoundEvent.getAssetMap().getIndex(SOUND_EVENT);
+    public static void chime(PlayerRef player, Outcome outcome) {
+        if (outcome.rarity() == null) {
+            return;
+        }
+        int index = SoundEvent.getAssetMap().getIndex(outcome.rarity().soundEvent());
         if (index != Integer.MIN_VALUE) {
             SoundUtil.playSoundEvent2dToPlayer(player, index, SoundCategory.SFX);
         }

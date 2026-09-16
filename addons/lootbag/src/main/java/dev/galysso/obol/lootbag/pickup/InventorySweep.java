@@ -50,8 +50,9 @@ public final class InventorySweep extends EntityEventSystem<EntityStore, Invento
         }
         Ref<EntityStore> ref = chunk.getReferenceTo(index);
         CombinedItemContainer inventory = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
-        if (ops.openAll(inventory, player.getUuid()).ok()) {
-            LootbagOps.chime(player);
+        LootbagOps.Outcome outcome = ops.openAll(inventory, player.getUuid());
+        if (outcome.ok()) {
+            LootbagOps.chime(player, outcome);
         }
     }
 

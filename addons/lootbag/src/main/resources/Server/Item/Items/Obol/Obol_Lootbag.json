@@ -47,14 +47,14 @@
             "Type": "ObolOpenLootbag",
             "All": true,
             "Effects": {
-              "LocalSoundEventId": "SFX_Obol_Lootbag_Open"
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Common"
             }
           },
           "Failed": {
             "Type": "ObolOpenLootbag",
             "All": false,
             "Effects": {
-              "LocalSoundEventId": "SFX_Obol_Lootbag_Open"
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Common"
             }
           }
         }

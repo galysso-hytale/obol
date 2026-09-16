@@ -1,0 +1,10 @@
+{
+  "Container": {
+    "Type": "Choice",
+    "Containers": [
+      { "Type": "ObolLootbag", "Weight": 70, "Rarity": "Common" },
+      { "Type": "ObolLootbag", "Weight": 25, "Rarity": "Uncommon" },
+      { "Type": "ObolLootbag", "Weight": 5,  "Rarity": "Rare" }
+    ]
+  }
+}

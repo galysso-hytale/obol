@@ -108,7 +108,7 @@ public final class ChestMoveHandler {
             int taken = quantity > 0 ? quantity : stack.getQuantity();
             LootbagOps.Outcome outcome = ops.open(container, (short) slotId, stack, player.getUuid(), taken);
             if (outcome.ok()) {
-                LootbagOps.chime(player);
+                LootbagOps.chime(player, outcome);
             }
         });
     }

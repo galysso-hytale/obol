@@ -4,5 +4,30 @@
   "Quality": "Legendary",
   "Icon": "Icons/ItemsGenerated/Obol_Lootbag_Legendary.png",
   "Model": "Items/Obol/Lootbag_Tight.blockymodel",
-  "Texture": "Items/Obol/Lootbag_Legendary_Texture.png"
+  "Texture": "Items/Obol/Lootbag_Legendary_Texture.png",
+  "Interactions": {
+    "Secondary": {
+      "RequireNewClick": true,
+      "Interactions": [
+        {
+          "Type": "Condition",
+          "Crouching": true,
+          "Next": {
+            "Type": "ObolOpenLootbag",
+            "All": true,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Legendary"
+            }
+          },
+          "Failed": {
+            "Type": "ObolOpenLootbag",
+            "All": false,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Legendary"
+            }
+          }
+        }
+      ]
+    }
+  }
 }

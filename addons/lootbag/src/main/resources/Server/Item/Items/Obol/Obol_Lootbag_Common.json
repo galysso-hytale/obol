@@ -4,5 +4,30 @@
   "Quality": "Common",
   "Icon": "Icons/ItemsGenerated/Obol_Lootbag_Common.png",
   "Model": "Items/Obol/Lootbag_Slack.blockymodel",
-  "Texture": "Items/Obol/Lootbag_Common_Texture.png"
+  "Texture": "Items/Obol/Lootbag_Common_Texture.png",
+  "Interactions": {
+    "Secondary": {
+      "RequireNewClick": true,
+      "Interactions": [
+        {
+          "Type": "Condition",
+          "Crouching": true,
+          "Next": {
+            "Type": "ObolOpenLootbag",
+            "All": true,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Common"
+            }
+          },
+          "Failed": {
+            "Type": "ObolOpenLootbag",
+            "All": false,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Common"
+            }
+          }
+        }
+      ]
+    }
+  }
 }

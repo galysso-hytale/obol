@@ -4,5 +4,30 @@
   "Quality": "Rare",
   "Icon": "Icons/ItemsGenerated/Obol_Lootbag_Rare.png",
   "Model": "Items/Obol/Lootbag_Full.blockymodel",
-  "Texture": "Items/Obol/Lootbag_Rare_Texture.png"
+  "Texture": "Items/Obol/Lootbag_Rare_Texture.png",
+  "Interactions": {
+    "Secondary": {
+      "RequireNewClick": true,
+      "Interactions": [
+        {
+          "Type": "Condition",
+          "Crouching": true,
+          "Next": {
+            "Type": "ObolOpenLootbag",
+            "All": true,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Rare"
+            }
+          },
+          "Failed": {
+            "Type": "ObolOpenLootbag",
+            "All": false,
+            "Effects": {
+              "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Rare"
+            }
+          }
+        }
+      ]
+    }
+  }
 }

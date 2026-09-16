@@ -1,0 +1,56 @@
+{
+  "$Comment": "Genere par tmp/lootbag.py, ne pas editer a la main.",
+  "Parent": "SFX_Attn_Quiet",
+  "AudioCategory": "AudioCat_SFX",
+  "Layers": [
+    {
+      "Files": [
+        "Sounds/Blocks/Coins/Coins_Break_01.ogg",
+        "Sounds/Blocks/Coins/Coins_Break_02.ogg",
+        "Sounds/Blocks/Coins/Coins_Break_03.ogg",
+        "Sounds/Blocks/Coins/Coins_Break_04.ogg",
+        "Sounds/Blocks/Coins/Coins_Break_05.ogg"
+      ],
+      "RandomSettings": {
+        "MinPitch": -1,
+        "MaxPitch": 2,
+        "MinVolume": -1
+      },
+      "RoundRobinHistorySize": 2,
+      "Volume": -5.0
+    },
+    {
+      "Files": [
+        "Sounds/Blocks/Crystal/Crystal_Magic_Sweetener_01.ogg",
+        "Sounds/Blocks/Crystal/Crystal_Magic_Sweetener_02.ogg",
+        "Sounds/Blocks/Crystal/Crystal_Magic_Sweetener_03.ogg",
+        "Sounds/Blocks/Crystal/Crystal_Magic_Sweetener_04.ogg",
+        "Sounds/Blocks/Crystal/Crystal_Magic_Sweetener_05.ogg"
+      ],
+      "Volume": -2.0,
+      "RandomSettings": {
+        "MinPitch": -1,
+        "MaxPitch": 1
+      },
+      "RoundRobinHistorySize": 2,
+      "StartDelay": 0.3
+    },
+    {
+      "Files": [
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_01.ogg",
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_02.ogg",
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_03.ogg",
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_04.ogg"
+      ],
+      "Volume": 10.0,
+      "RandomSettings": {
+        "MinPitch": -1,
+        "MaxPitch": 1
+      },
+      "RoundRobinHistorySize": 2,
+      "StartDelay": 0.6
+    }
+  ],
+  "Volume": 0,
+  "MaxInstance": 2
+}

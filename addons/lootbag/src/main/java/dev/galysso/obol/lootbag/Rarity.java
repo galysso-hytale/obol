@@ -4,10 +4,11 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * The five lootbags, one per vanilla item quality. The quality is the whole
- * visual language of a bag (the frame of its slot, the frame and colour of
- * its tooltip, the label under its name, the halo on the ground) and the
- * key of the amount law an admin sets in {@code lootbag.json}.
+ * The five lootbags, one per vanilla item quality, in ascending order. The
+ * quality is the whole visual language of a bag (the frame of its slot, the
+ * frame and colour of its tooltip, the label under its name, the halo on
+ * the ground), the sound it opens with, and the key of the amount law an
+ * admin sets in {@code lootbag.json}.
  *
  * <p>No sixth tier: the five vanilla qualities cover every frame the game
  * ships, and a bag's rarity says nothing about the coins inside.</p>
@@ -21,6 +22,9 @@ public enum Rarity {
 
     /** What an item id of a lootbag starts with, the template's id plus an underscore. */
     public static final String ITEM_ID_PREFIX = "Obol_Lootbag_";
+
+    /** What the opening sound event of a rarity starts with. */
+    public static final String SOUND_EVENT_PREFIX = "SFX_Obol_Lootbag_Open_";
 
     private final String model;
 
@@ -36,6 +40,19 @@ public enum Rarity {
     /** {@return the item id of the bag of this rarity, {@code Obol_Lootbag_<Rarity>}} */
     public String itemId() {
         return ITEM_ID_PREFIX + name();
+    }
+
+    /**
+     * {@return the sound event of the pack a bag of this rarity opens with,
+     * {@code SFX_Obol_Lootbag_Open_<Rarity>}}
+     *
+     * <p>The coins chime is the base of all five, and the higher the
+     * rarity the clearer the layer on top of it, nothing above it for the
+     * two low ones. The click plays it through the item's {@code Effects},
+     * the pickup paths through {@link LootbagOps#chime}.</p>
+     */
+    public String soundEvent() {
+        return SOUND_EVENT_PREFIX + name();
     }
 
     /**

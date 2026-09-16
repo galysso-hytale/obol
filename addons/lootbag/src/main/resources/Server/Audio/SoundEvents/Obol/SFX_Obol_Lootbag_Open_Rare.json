@@ -17,9 +17,24 @@
         "MinVolume": -1
       },
       "RoundRobinHistorySize": 2,
-      "Volume": -2.0
+      "Volume": -5.0
+    },
+    {
+      "Files": [
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_01.ogg",
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_02.ogg",
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_03.ogg",
+        "Sounds/Items/Gem/Gem_Emit_Shimmer_04.ogg"
+      ],
+      "Volume": 10.0,
+      "RandomSettings": {
+        "MinPitch": -1,
+        "MaxPitch": 1
+      },
+      "RoundRobinHistorySize": 2,
+      "StartDelay": 0.45
     }
   ],
   "Volume": 0,
-  "MaxInstance": 4
+  "MaxInstance": 2
 }

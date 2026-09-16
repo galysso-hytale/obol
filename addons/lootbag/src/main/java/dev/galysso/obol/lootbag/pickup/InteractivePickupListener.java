@@ -50,7 +50,7 @@ public final class InteractivePickupListener extends EntityEventSystem<EntitySto
         LootbagOps.Outcome outcome = ops.credit(player.getUuid(), stack, stack.getQuantity());
         if (outcome.ok()) {
             event.setCancelled(true);
-            LootbagOps.chime(player);
+            LootbagOps.chime(player, outcome);
         }
     }
 

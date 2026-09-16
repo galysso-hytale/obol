@@ -28,7 +28,7 @@ import javax.annotation.Nonnull;
  * of the player who runs it.
  *
  * <pre>
- * { "Type": "ObolOpenLootbag", "All": true, "Effects": { "LocalSoundEventId": "SFX_Obol_Lootbag_Open" } }
+ * { "Type": "ObolOpenLootbag", "All": true, "Effects": { "LocalSoundEventId": "SFX_Obol_Lootbag_Open_Rare" } }
  * </pre>
  *
  * <p>Two ways in. From a click ({@code Secondary}, the chain of the item
@@ -143,7 +143,7 @@ public final class OpenLootbagInteraction extends SimpleInstantInteraction {
             context.getState().state = InteractionState.Failed;
             return;
         }
-        LootbagOps.chime(player);
+        LootbagOps.chime(player, outcome);
     }
 
     @Override

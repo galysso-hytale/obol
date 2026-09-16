@@ -18,13 +18,17 @@ import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.galysso.obol.lootbag.DropRule;
 import dev.galysso.obol.lootbag.LootLaw;
 import dev.galysso.obol.lootbag.LootbagConfig;
 import dev.galysso.obol.lootbag.Rarity;
 import dev.galysso.obol.lootbag.api.LootbagItem;
+import dev.galysso.obol.lootbag.drops.DropRules;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -41,19 +45,24 @@ import java.util.concurrent.ThreadLocalRandom;
  *   falls, to see a table's bags with their tooltip.</li>
  *   <li>{@code rarities}: the law of each rarity, as {@code lootbag.json}
  *   has it.</li>
+ *   <li>{@code droplists [--filter=pattern]}: the drop tables the rules of
+ *   {@code drops.json} apply to, with the rules. With a filter, the tables
+ *   matching it (a pattern as {@code Droplists} takes), applied to or
+ *   not, to find the ids and folders a rule can name.</li>
  * </ul>
  */
 public final class LootbagCommand extends CommandBase {
 
     static final String PERMISSION = "obol.lootbag.debug";
 
-    public LootbagCommand(LootbagConfig config) {
+    public LootbagCommand(LootbagConfig config, DropRules rules) {
         super("lootbag", "Obol Lootbag testing aid.");
         requirePermission(PERMISSION);
         setPermissionGroups("hytale:Admin");
         addSubCommand(new Give(config));
         addSubCommand(new Roll());
         addSubCommand(new Rarities(config));
+        addSubCommand(new Droplists(rules));
     }
 
     @Override
@@ -172,6 +181,70 @@ public final class LootbagCommand extends CommandBase {
                 return;
             }
             give(context, store, ref, stacks, "items from " + id);
+        }
+    }
+
+    private static final class Droplists extends CommandBase {
+
+        private static final int LIMIT = 40;
+
+        private final DropRules rules;
+        private final OptionalArg<String> filter;
+
+        Droplists(DropRules rules) {
+            super("droplists", "The drop tables the rules of drops.json apply to, or those matching a pattern.");
+            this.rules = rules;
+            filter = withOptionalArg("filter", "A pattern as Droplists takes: an id (Drop_Skeleton_*) or a folder "
+                    + "and name under Server/Drops (NPCs/Undead/*). Without it, the tables the rules apply to.",
+                    ArgTypes.STRING);
+            requirePermission(PERMISSION);
+        }
+
+        @Override
+        protected void executeSync(CommandContext context) {
+            Map<String, List<DropRule.Resolved>> applied = rules.applied();
+            List<String> lines = new ArrayList<>();
+            if (filter.provided(context)) {
+                DropRule.Matcher matcher = DropRule.Matcher.of(filter.get(context));
+                Map<String, String> paths = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                ItemDropList.getAssetMap().getAssetMap().keySet().forEach(id ->
+                        paths.put(id, DropRules.relativePath(ItemDropList.getAssetMap().getPath(id))));
+                paths.forEach((id, path) -> {
+                    if (matcher.matches(id, path)) {
+                        List<DropRule.Resolved> on = applied.get(id);
+                        lines.add((path != null ? path : id) + (on == null ? "" : ": " + describe(on)));
+                    }
+                });
+                if (lines.isEmpty()) {
+                    context.sendMessage(Message.raw("No drop table matches " + filter.get(context) + "."));
+                    return;
+                }
+            } else {
+                applied.forEach((id, on) -> lines.add(id + ": " + describe(on)));
+                if (lines.isEmpty()) {
+                    context.sendMessage(Message.raw(rules.rules().isEmpty()
+                            ? "No rule in drops.json: bags fall only from tables that name them."
+                            : "No drop table matches the rules of drops.json."));
+                    return;
+                }
+            }
+            context.sendMessage(Message.raw(lines.size() + (lines.size() == 1 ? " table" : " tables")
+                    + (filter.provided(context) ? " match " + filter.get(context) : " get bags from the rules of drops.json")
+                    + (lines.size() > LIMIT ? ", the first " + LIMIT : "") + ":"));
+            for (String line : lines.subList(0, Math.min(lines.size(), LIMIT))) {
+                context.sendMessage(Message.raw("  " + line));
+            }
+        }
+
+        private static String describe(List<DropRule.Resolved> on) {
+            StringBuilder text = new StringBuilder();
+            for (DropRule.Resolved rule : on) {
+                if (!text.isEmpty()) {
+                    text.append(" + ");
+                }
+                text.append(rule.text());
+            }
+            return text.toString();
         }
     }
 
