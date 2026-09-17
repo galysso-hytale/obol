@@ -50,6 +50,27 @@ $Sounds = "../Sounds.ui";
 @Grid = Group {
   LayoutMode: LeftCenterWrap;
 };
+// A gesture hint: the game's own mouse icon (the small ones its tool
+// legends draw at 24, in the pack under Common/) and what the gesture
+// does.
+@LeftClick = PatchStyle(TexturePath: "../Common/SmallInputIconMouseLeftClick.png");
+@RightClick = PatchStyle(TexturePath: "../Common/SmallInputIconMouseRightClick.png");
+@Hint = Group {
+  @Icon = "";
+  @Text = "";
+  LayoutMode: Left;
+
+  Group {
+    Anchor: (Width: 24, Height: 24, Right: 5);
+    Background: @Icon;
+  }
+
+  Label {
+    Text: @Text;
+    Anchor: (Height: 24);
+    Style: (...@Small, FontSize: 12);
+  }
+};
 
 $C.@PageOverlay {
   LayoutMode: Middle;
@@ -371,10 +392,24 @@ $C.@PageOverlay {
 
       // Below: my inventory, storage then hotbar as the game lays it
       // out, and my backpack beside it.
-      Label {
-        Text: "Click a stack to choose how many, right-click to move it whole.";
-        Anchor: (Height: 16, Bottom: 6);
-        Style: (...@Small, HorizontalAlignment: Center, FontSize: 12);
+      // The gestures on a stack, by their mouse icons.
+      Group {
+        LayoutMode: Center;
+        Anchor: (Height: 24, Bottom: 6);
+
+        @Hint {
+          @Icon = @LeftClick;
+          @Text = "Choose how many";
+        }
+
+        Group {
+          Anchor: (Width: 24);
+        }
+
+        @Hint {
+          @Icon = @RightClick;
+          @Text = "Move the whole stack";
+        }
       }
 
       // Centred, so that the inventory alone sits in the middle when the
