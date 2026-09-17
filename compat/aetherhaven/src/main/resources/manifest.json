@@ -1,0 +1,26 @@
+{
+    "Group": "Galysso",
+    "Name": "obol-aetherhaven",
+    "Version": "0.1.0",
+    "Description": "Aetherhaven pays, earns and displays in Obol coins. Its gold loot drops as Obol lootbags.",
+    "Authors": [
+        {
+            "Name": "Galysso"
+        }
+    ],
+    "Website": "https://github.com/galysso/obol",
+    "ServerVersion": ">=0.6.0 <0.7.0",
+    "Dependencies": {
+        "Galysso:obol": ">=0.2.0",
+        "Hexvane:Aetherhaven": ">=3.2.0"
+    },
+    "OptionalDependencies": {
+        "Galysso:obol-lootbag": ">=0.1.0"
+    },
+    "DisabledByDefault": false,
+    "Main": "dev.galysso.obol.compat.aetherhaven.ObolAetherhavenPlugin",
+    "IncludesAssetPack": false,
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}

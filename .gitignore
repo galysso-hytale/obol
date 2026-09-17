@@ -27,3 +27,7 @@ addons/lootbag/src/main/resources/lootbag.json.bak
 # Written by the dev server through the run/mods/Galysso_obol-trade symlink.
 addons/trade/src/main/resources/trade.json
 addons/trade/src/main/resources/trade.json.bak
+
+# Written by the dev server through the run/mods/Galysso_obol-aetherhaven symlink.
+compat/aetherhaven/src/main/resources/config.json
+compat/aetherhaven/src/main/resources/config.json.bak
