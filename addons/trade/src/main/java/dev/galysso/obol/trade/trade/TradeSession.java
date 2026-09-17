@@ -23,7 +23,9 @@ import dev.galysso.obol.api.Obol;
 import dev.galysso.obol.trade.TradeConfig;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -92,6 +94,8 @@ public final class TradeSession {
         String notice;
         /** The stack the quantity popup is open on, null when it is closed. */
         Pick pick;
+        /** Where each offer slot's stack was taken from, by offer slot, to put it back there. */
+        final Map<Short, Origin> origins = new HashMap<>();
         boolean accepted;
 
         Side(PlayerRef player) {
@@ -112,11 +116,15 @@ public final class TradeSession {
      * its slot there, and the stack as it was, to notice a change before
      * moving.
      */
+    /** A slot of one of the inventory grids of a page ({@code TradePage.STORAGE} and the like). */
+    record Origin(String grid, short slot) {
+    }
+
     record Pick(String grid, short slot, ItemStack stack) {
     }
 
-    /** Stacks each side may offer: three rows of the page's grid. */
-    static final short OFFER_SLOTS = 18;
+    /** Stacks each side may offer: three rows of nine on the page. */
+    static final short OFFER_SLOTS = 27;
 
     private final TradeSessions sessions;
     private final TradeConfig config;
@@ -279,7 +287,8 @@ public final class TradeSession {
         pages.openCustomPage(ref, store, page);
         // The page draws the inventory itself: it must hear it change,
         // and not only through the page (a pickup, a drop).
-        for (int section : new int[] {InventoryComponent.STORAGE_SECTION_ID, InventoryComponent.HOTBAR_SECTION_ID}) {
+        for (int section : new int[] {InventoryComponent.STORAGE_SECTION_ID, InventoryComponent.HOTBAR_SECTION_ID,
+                InventoryComponent.BACKPACK_SECTION_ID}) {
             ItemContainer container = InventoryUtils.getSectionById(ref, section, store);
             if (container != null) {
                 side.inventoryHooks.add(container.registerChangeEvent(event -> {
@@ -428,19 +437,85 @@ public final class TradeSession {
 
     /**
      * Moves {@code count} (at least one) out of {@code slot} of
-     * {@code grid}: into the escrow from the inventory, into the
-     * inventory (hotbar first) from the escrow. The change hooks redraw
+     * {@code grid}. Into the escrow from the inventory: onto what was
+     * already taken from that very slot when it has room, else into an
+     * empty offer slot, so that each offer slot comes from one inventory
+     * slot, which is remembered. (The same item taken from two slots
+     * makes two offer slots.) Back from the escrow: into that remembered
+     * slot when it is empty or holds the same item with room, else
+     * wherever the inventory has room (hotbar, storage, then backpack).
+     * The change hooks redraw
      * both pages; the last refresh closes the popup even when nothing
      * moved.
      */
     private void move(Side side, Ref<EntityStore> ref, Store<EntityStore> store, String grid, short slot, int count) {
-        boolean back = TradePage.MY_OFFER.equals(grid);
+        count = Math.max(1, count);
         ItemContainer from = gridContainer(side, grid, ref, store);
-        ItemContainer to = back ? InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST) : side.offer;
-        if (!from.moveItemStackFromSlot(slot, Math.max(1, count), to).succeeded()) {
-            side.notice = back ? "No room in your inventory." : "No room in your offer.";
+        boolean moved;
+        if (TradePage.MY_OFFER.equals(grid)) {
+            moved = takeBack(side, ref, store, slot, count);
+            if (ItemStack.isEmpty(side.offer.getItemStack(slot))) {
+                side.origins.remove(slot);
+            }
+        } else {
+            Origin origin = new Origin(grid, slot);
+            short target = offerSlotFor(side, origin, from.getItemStack(slot), count);
+            moved = target >= 0 && from.moveItemStackFromSlotToSlot(slot, count, side.offer, target).succeeded();
+            if (moved) {
+                side.origins.put(target, origin);
+            }
+        }
+        if (!moved) {
+            side.notice = TradePage.MY_OFFER.equals(grid) ? "No room in your inventory." : "No room in your offer.";
         }
         refresh(side);
+    }
+
+    /**
+     * {@code count} of offer slot {@code slot} back into the inventory,
+     * where it came from when that still fits, else anywhere.
+     */
+    private boolean takeBack(Side side, Ref<EntityStore> ref, Store<EntityStore> store, short slot, int count) {
+        ItemStack stack = side.offer.getItemStack(slot);
+        Origin origin = side.origins.get(slot);
+        if (origin != null) {
+            ItemContainer home = gridContainer(side, origin.grid(), ref, store);
+            if (home != null && origin.slot() < home.getCapacity() && fits(home, origin.slot(), stack, count)
+                    && side.offer.moveItemStackFromSlotToSlot(slot, count, home, origin.slot()).succeeded()) {
+                return true;
+            }
+        }
+        ItemContainer inventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
+        return side.offer.moveItemStackFromSlot(slot, count, inventory).succeeded();
+    }
+
+    /**
+     * The offer slot for {@code count} of {@code stack} taken from
+     * {@code origin}: the one already holding what came from there, when
+     * it has room, else the first empty one, else -1.
+     */
+    private static short offerSlotFor(Side side, Origin origin, ItemStack stack, int count) {
+        ItemContainer offer = side.offer;
+        short empty = -1;
+        for (short slot = 0; slot < offer.getCapacity(); slot++) {
+            if (ItemStack.isEmpty(offer.getItemStack(slot))) {
+                if (empty < 0) {
+                    empty = slot;
+                }
+            } else if (origin.equals(side.origins.get(slot)) && fits(offer, slot, stack, count)) {
+                return slot;
+            }
+        }
+        return empty;
+    }
+
+    /** Whether {@code count} of {@code stack} can join {@code slot} of {@code container} whole: empty, or the same item with room. */
+    private static boolean fits(ItemContainer container, short slot, ItemStack stack, int count) {
+        ItemStack in = container.getItemStack(slot);
+        if (ItemStack.isEmpty(in)) {
+            return true;
+        }
+        return in.isStackableWith(stack) && in.getQuantity() + count <= in.getItem().getMaxStack();
     }
 
     /** {@code side} cancelled the quantity popup. */
@@ -457,6 +532,7 @@ public final class TradeSession {
         return switch (grid) {
             case TradePage.STORAGE -> InventoryUtils.getSectionById(ref, InventoryComponent.STORAGE_SECTION_ID, store);
             case TradePage.HOTBAR -> InventoryUtils.getSectionById(ref, InventoryComponent.HOTBAR_SECTION_ID, store);
+            case TradePage.BACKPACK -> InventoryUtils.getSectionById(ref, InventoryComponent.BACKPACK_SECTION_ID, store);
             case TradePage.MY_OFFER -> side.offer;
             default -> null;
         };
@@ -650,9 +726,22 @@ public final class TradeSession {
         side.inventoryHooks.clear();
     }
 
-    /** Everything still in {@code side}'s escrow goes back to their inventory, the surplus at their feet. */
+    /**
+     * Everything still in {@code side}'s escrow goes back to their
+     * inventory: each stack to the slot it was taken from when that
+     * still fits, the rest wherever there is room, the surplus at their
+     * feet.
+     */
     private void giveBack(Side side, Ref<EntityStore> ref, Store<EntityStore> store) {
-        ItemContainer inventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+        for (Map.Entry<Short, Origin> entry : side.origins.entrySet()) {
+            short slot = entry.getKey();
+            ItemStack stack = side.offer.getItemStack(slot);
+            if (ItemStack.isEmpty(stack)) {
+                continue;
+            }
+            takeBack(side, ref, store, slot, stack.getQuantity());
+        }
+        ItemContainer inventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
         for (ItemStack stack : drain(side)) {
             ItemStack rest = inventory.addItemStack(stack).getRemainder();
             if (!ItemStack.isEmpty(rest)) {
@@ -663,13 +752,13 @@ public final class TradeSession {
 
     /**
      * The same into an entity that has left the store: its inventory
-     * containers, in the hotbar-first order, and what fits nowhere is
+     * containers, hotbar, storage, then backpack, and what fits nowhere is
      * lost, there is no ground to drop it on.
      */
     private void giveBack(Side side, Holder<EntityStore> holder) {
         for (ItemStack stack : drain(side)) {
             ItemStack rest = stack;
-            for (ComponentType<EntityStore, ? extends InventoryComponent> type : InventoryComponent.HOTBAR_FIRST) {
+            for (ComponentType<EntityStore, ? extends InventoryComponent> type : InventoryComponent.HOTBAR_STORAGE_BACKPACK) {
                 InventoryComponent component = holder.getComponent(type);
                 if (component == null) {
                     continue;
@@ -685,9 +774,10 @@ public final class TradeSession {
         }
     }
 
-    /** Takes everything out of {@code side}'s escrow and stops watching it. */
+    /** Takes everything out of {@code side}'s escrow, forgets where it came from and stops watching it. */
     private List<ItemStack> drain(Side side) {
         SimpleItemContainer offer = side.offer;
+        side.origins.clear();
         if (offer == null) {
             return List.of();
         }

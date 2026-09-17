@@ -1,9 +1,22 @@
 // One cell of a grid of the trade page (Trade.ui), appended by the server
 // once per slot of the container behind the grid: the slot background, a
-// button over it, and the stack when there is one. The server sets
-// "#Item.Visible", "#Item.ItemId", "#Item.Quantity" and
-// "#Item.ShowQuantity", binds #Cell (Activating and RightClicking) on the
-// player's own grids, and disables it on the other's offer.
+// button over it, the stack when there is one, and its quantity as a
+// label of ours (#Count), as the game's DroppedItemSlot.ui does, so that
+// it can draw over the backpack mark, which the ItemSlot's own quantity
+// could not: that one is part of the element, under anything drawn
+// after it. The server sets "#Item.Visible", "#Item.ItemId",
+// "#Count.Visible" and "#Count.Text", binds #Cell (Activating and
+// RightClicking) on the player's own grids, and disables it on the
+// other's offer.
+//
+// Two marks tell the backpack apart: #Tint, a leather wash under the
+// item, on every cell of the backpack grid and on the offer cells whose
+// stack came from the backpack, and #Tag, the inventory's backpack icon
+// on a dark square flush with the slot's top-left corner, its bottom-right
+// corner rounded (BackpackTag.png, composed by tmp/backpack_tag.py), on
+// those offer cells only. The server shows both. (One image on purpose:
+// an ItemSlot would paint its own opaque slot behind the icon, and the
+// client's inventory icons are not reachable from Common/UI/Custom.)
 $C = "../Common.ui";
 
 Group {
@@ -13,6 +26,12 @@ Group {
   Group {
     Anchor: (Full: 0);
     Background: "../Common/BlockSelectorSlotBackground.png";
+
+    Group #Tint {
+      Anchor: (Full: 0);
+      Background: #b5813f(0.28);
+      Visible: false;
+    }
 
     ItemSlotButton #Cell {
       Anchor: (Full: 0);
@@ -29,8 +48,24 @@ Group {
         Anchor: (Full: 0);
         Visible: false;
         ShowQualityBackground: true;
-        ShowQuantity: true;
+        ShowQuantity: false;
       }
+    }
+
+    // After the button, so that it draws over the item (which paints a
+    // full slot under itself), and outside it, so that its corner is the
+    // slot background's corner whatever the button pads.
+    Group #Tag {
+      Anchor: (Width: 18, Height: 18, Top: 0, Left: 0);
+      Background: "BackpackTag.png";
+      Visible: false;
+    }
+
+    // Last, over the mark.
+    Label #Count {
+      Anchor: (Right: 3, Bottom: 1);
+      Visible: false;
+      Style: (FontSize: 14, TextColor: #e2d8d8, HorizontalAlignment: End, VerticalAlignment: End, RenderBold: true);
     }
   }
 }

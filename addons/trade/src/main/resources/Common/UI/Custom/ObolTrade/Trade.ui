@@ -1,17 +1,22 @@
 // The trade page (TradePage), the same on both sides: my offer on the
-// left (#Mine), the other's on the right (#Theirs), my inventory below,
-// then a notice line and Cancel.
+// left (#Mine), the other's on the right (#Theirs), my inventory below
+// (#Storage over #Hotbar) with my backpack beside it (#Backpack, its
+// column #BackpackColumn hidden when I carry none), then a notice line
+// and Cancel.
 //
-// The four grids (#MyOffer, #TheirOffer, #Storage, #Hotbar) are groups
-// the server fills with one Slot.ui per slot, wrapped into rows, and
-// keeps up to date. Each cell is a button: a click on a stack of my grids
-// opens #Pick, the quantity popup (the stack, a slider with its number
-// field from 1 to the stack, Offer or Take back that many, Cancel), a
-// right-click moves the whole stack, a click on a single item moves it. The server shows and fills the popup (#Pick.Visible,
-// #PickTitle, #PickIcon, the Max and Value of #PickQuantity,
-// #PickMove.Text) and binds #PickMove, which sends "#PickQuantity.Value",
-// and #PickCancel. No ItemGrid: on a custom page it reports no
-// plain click, only a drop after picking the stack up in hand.
+// The five grids (#MyOffer, #TheirOffer, #Storage, #Hotbar, #Backpack)
+// are groups the server fills with one Slot.ui per slot, wrapped into
+// rows of nine, and keeps up to date. #Backpack has no height here: the
+// server sets its Anchor from the backpack's capacity, 54 slots at most.
+// Each cell is a button: a click on a stack of my grids opens #Pick, the
+// quantity popup (the stack, a slider with its number field from 1 to
+// the stack, Offer or Take back that many, Cancel), a right-click moves
+// the whole stack, a click on a single item moves it. The server shows
+// and fills the popup (#Pick.Visible, #PickTitle, #PickIcon, the Max and
+// Value of #PickQuantity, #PickMove.Text) and binds #PickMove, which
+// sends "#PickQuantity.Value", and #PickCancel. No ItemGrid: on a custom
+// page it reports no plain click, only a drop after picking the stack up
+// in hand.
 //
 // The server also sets #Heading, "#Theirs #Caption", "#Amount.Value", the
 // text and Disabled of #AcceptButton, #TheirStatus, #Notice, draws the
@@ -32,7 +37,10 @@ $C.@PageOverlay {
   LayoutMode: Middle;
 
   $C.@DecoratedContainer {
-    Anchor: (Width: 640);
+    // Two offer panels of nine cells (414 plus their padding) and the gap
+    // between them; the inventory and backpack columns below are the
+    // same nine cells wide.
+    Anchor: (Width: 936);
 
     #Title {
       $C.@Title {
@@ -69,7 +77,7 @@ $C.@PageOverlay {
             LayoutMode: Center;
 
             @Grid #MyOffer {
-              Anchor: (Width: 276, Height: 138);
+              Anchor: (Width: 414, Height: 138);
             }
           }
 
@@ -146,7 +154,7 @@ $C.@PageOverlay {
             LayoutMode: Center;
 
             @Grid #TheirOffer {
-              Anchor: (Width: 276, Height: 138);
+              Anchor: (Width: 414, Height: 138);
             }
           }
 
@@ -178,33 +186,56 @@ $C.@PageOverlay {
         }
       }
 
-      // Below: my inventory, storage then hotbar, as the game lays it out.
-      Label {
-        Text: "Your inventory";
-        Anchor: (Height: 18, Bottom: 2);
-        Style: @Caption;
-      }
-
+      // Below: my inventory, storage then hotbar as the game lays it
+      // out, and my backpack beside it.
       Label {
         Text: "Click a stack to choose how many, right-click to move it whole.";
         Anchor: (Height: 16, Bottom: 6);
         Style: (...@Small, HorizontalAlignment: Center, FontSize: 12);
       }
 
+      // Centred, so that the inventory alone sits in the middle when the
+      // backpack column is hidden.
       Group {
         LayoutMode: Center;
+        Anchor: (Bottom: 8);
 
-        @Grid #Storage {
-          Anchor: (Width: 414, Height: 184);
+        Group {
+          LayoutMode: Top;
+          Anchor: (Width: 414);
+
+          Label {
+            Text: "Your inventory";
+            Anchor: (Height: 18, Bottom: 4);
+            Style: @Caption;
+          }
+
+          @Grid #Storage {
+            Anchor: (Width: 414, Height: 184);
+          }
+
+          @Grid #Hotbar {
+            Anchor: (Width: 414, Height: 46, Top: 6);
+          }
         }
-      }
 
-      Group {
-        LayoutMode: Center;
-        Anchor: (Top: 6, Bottom: 8);
+        Group {
+          Anchor: (Width: 12);
+        }
 
-        @Grid #Hotbar {
-          Anchor: (Width: 414, Height: 46);
+        Group #BackpackColumn {
+          LayoutMode: Top;
+          Anchor: (Width: 414);
+
+          Label {
+            Text: "Your backpack";
+            Anchor: (Height: 18, Bottom: 4);
+            Style: @Caption;
+          }
+
+          @Grid #Backpack {
+            Anchor: (Width: 414);
+          }
         }
       }
 
@@ -229,8 +260,7 @@ $C.@PageOverlay {
 
 $C.@BackButton {}
 
-// The quantity popup, over everything, shown by the server on a
-// double-click.
+// The quantity popup, over everything, shown by the server on a click.
 Group #Pick {
   Visible: false;
   LayoutMode: Middle;
