@@ -1,20 +1,38 @@
 // The trade page (TradePage), the same on both sides: my offer on the
-// left (#Mine), the other's on the right (#Theirs), Accept under mine,
-// the other's status under theirs, Cancel below. For now both panels are
-// empty placeholders: the grids, the coins and Accept come with the next
-// increment. The server sets #Heading, "#Theirs #Caption" and
-// #TheirStatus, and binds #CancelButton.
+// left (#Mine), the other's on the right (#Theirs), my inventory below,
+// then a notice line and Cancel.
+//
+// The four grids (#MyOffer, #TheirOffer, #Storage, #Hotbar) are groups
+// the server fills with one Slot.ui per slot, wrapped into rows, and
+// keeps up to date. Each cell is a button: a click on a stack of my grids
+// opens #Pick, the quantity popup (the stack, a slider with its number
+// field from 1 to the stack, Offer or Take back that many, Cancel), a
+// right-click moves the whole stack, a click on a single item moves it. The server shows and fills the popup (#Pick.Visible,
+// #PickTitle, #PickIcon, the Max and Value of #PickQuantity,
+// #PickMove.Text) and binds #PickMove, which sends "#PickQuantity.Value",
+// and #PickCancel. No ItemGrid: on a custom page it reports no
+// plain click, only a drop after picking the stack up in hand.
+//
+// The server also sets #Heading, "#Theirs #Caption", "#Amount.Value", the
+// text and Disabled of #AcceptButton, #TheirStatus, #Notice, draws the
+// coins through Obol (ObolUi.show into #MyCoins, #Balance and
+// #TheirCoins), and binds #Amount (ValueChanged), #AcceptButton and
+// #CancelButton.
 $C = "../Common.ui";
 $Sounds = "../Sounds.ui";
 
 @Caption = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, HorizontalAlignment: Center, RenderUppercase: true, RenderBold: true, FontSize: 13);
-@Muted = (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, Wrap: true, TextColor: #ffffff(0.5));
+@Small = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, TextColor: #ffffff(0.6));
+// A grid: cells of 46 (Slot.ui), wrapped by the width.
+@Grid = Group {
+  LayoutMode: LeftCenterWrap;
+};
 
 $C.@PageOverlay {
   LayoutMode: Middle;
 
   $C.@DecoratedContainer {
-    Anchor: (Width: 568);
+    Anchor: (Width: 640);
 
     #Title {
       $C.@Title {
@@ -23,18 +41,18 @@ $C.@PageOverlay {
     }
 
     #Content {
-      Padding: (Vertical: 24, Horizontal: 32);
+      Padding: (Vertical: 16, Horizontal: 32);
 
       Label #Heading {
-        Anchor: (Bottom: 12);
+        Anchor: (Bottom: 8);
         Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, FontSize: 18, TextColor: #ffffff);
       }
 
       Group {
         LayoutMode: Left;
-        Anchor: (Bottom: 12);
+        Anchor: (Bottom: 8);
 
-        // Left: what I offer.
+        // Left: what I offer, the escrow.
         Group #Mine {
           LayoutMode: Top;
           FlexWeight: 1;
@@ -43,14 +61,63 @@ $C.@PageOverlay {
 
           Label #Caption {
             Text: "Your offer";
-            Anchor: (Height: 18, Bottom: 8);
+            Anchor: (Height: 18, Bottom: 6);
             Style: @Caption;
           }
 
-          Label {
-            Text: "Nothing yet";
-            Anchor: (Height: 60);
-            Style: @Muted;
+          Group {
+            LayoutMode: Center;
+
+            @Grid #MyOffer {
+              Anchor: (Width: 276, Height: 138);
+            }
+          }
+
+          // The coins I offer: typed, checked by the server as I type.
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 38, Top: 8);
+
+            Label {
+              Text: "Coins";
+              Anchor: (Width: 48);
+              Style: @Small;
+            }
+
+            $C.@TextField #Amount {
+              FlexWeight: 1;
+              PlaceholderText: "e.g. 2g 35s";
+            }
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 26, Top: 4);
+
+            Label {
+              Text: "Offered";
+              Anchor: (Width: 48);
+              Style: @Small;
+            }
+
+            Group #MyCoins {
+              FlexWeight: 1;
+            }
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 26, Bottom: 8);
+
+            Label {
+              Text: "You have";
+              Anchor: (Width: 48);
+              Style: @Small;
+            }
+
+            Group #Balance {
+              FlexWeight: 1;
+            }
           }
 
           $C.@TextButton #AcceptButton {
@@ -63,7 +130,7 @@ $C.@PageOverlay {
           Anchor: (Width: 12);
         }
 
-        // Right: what the other offers.
+        // Right: what the other offers, read only.
         Group #Theirs {
           LayoutMode: Top;
           FlexWeight: 1;
@@ -71,14 +138,37 @@ $C.@PageOverlay {
           Padding: (Full: 8);
 
           Label #Caption {
-            Anchor: (Height: 18, Bottom: 8);
+            Anchor: (Height: 18, Bottom: 6);
             Style: @Caption;
           }
 
-          Label {
-            Text: "Nothing yet";
-            Anchor: (Height: 60);
-            Style: @Muted;
+          Group {
+            LayoutMode: Center;
+
+            @Grid #TheirOffer {
+              Anchor: (Width: 276, Height: 138);
+            }
+          }
+
+          Group {
+            LayoutMode: Left;
+            Anchor: (Height: 38, Top: 8);
+
+            Label {
+              Text: "Coins";
+              Anchor: (Width: 48);
+              Style: @Small;
+            }
+
+            Group #TheirCoins {
+              FlexWeight: 1;
+            }
+          }
+
+          // Fills what the two coin rows take on the left, so that the
+          // status sits level with Accept.
+          Group {
+            FlexWeight: 1;
           }
 
           Label #TheirStatus {
@@ -88,12 +178,48 @@ $C.@PageOverlay {
         }
       }
 
+      // Below: my inventory, storage then hotbar, as the game lays it out.
+      Label {
+        Text: "Your inventory";
+        Anchor: (Height: 18, Bottom: 2);
+        Style: @Caption;
+      }
+
+      Label {
+        Text: "Click a stack to choose how many, right-click to move it whole.";
+        Anchor: (Height: 16, Bottom: 6);
+        Style: (...@Small, HorizontalAlignment: Center, FontSize: 12);
+      }
+
+      Group {
+        LayoutMode: Center;
+
+        @Grid #Storage {
+          Anchor: (Width: 414, Height: 184);
+        }
+      }
+
+      Group {
+        LayoutMode: Center;
+        Anchor: (Top: 6, Bottom: 8);
+
+        @Grid #Hotbar {
+          Anchor: (Width: 414, Height: 46);
+        }
+      }
+
+      Label #Notice {
+        Anchor: (Height: 20, Bottom: 6);
+        Style: (...$C.@DefaultLabelStyle, HorizontalAlignment: Center, TextColor: #ffcc00);
+        Visible: false;
+      }
+
       Group {
         LayoutMode: Center;
 
         $C.@SecondaryTextButton #CancelButton {
           @Sounds = $Sounds.@ButtonsCancel;
-          Text: "Cancel";
+          Text: "Cancel the trade";
           FlexWeight: 1;
         }
       }
@@ -102,3 +228,76 @@ $C.@PageOverlay {
 }
 
 $C.@BackButton {}
+
+// The quantity popup, over everything, shown by the server on a
+// double-click.
+Group #Pick {
+  Visible: false;
+  LayoutMode: Middle;
+  Background: #000000(0.45);
+
+  Group {
+    Anchor: (Width: 380);
+    LayoutMode: Top;
+    Background: (TexturePath: "../Common/ContainerPatch.png", Border: 23);
+    Padding: (Full: 20);
+
+    Label #PickTitle {
+      Anchor: (Height: 22, Bottom: 10);
+      Style: @Caption;
+    }
+
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 44, Bottom: 14);
+
+      Group {
+        Anchor: (Width: 44, Height: 44, Right: 16);
+        Background: "../Common/BlockSelectorSlotBackground.png";
+
+        ItemSlot #PickIcon {
+          Anchor: (Full: 0);
+          ShowQualityBackground: true;
+          ShowQuantity: true;
+        }
+      }
+
+      Group {
+        LayoutMode: Middle;
+        FlexWeight: 1;
+
+        SliderNumberField #PickQuantity {
+          Anchor: (Height: 5);
+          Min: 1;
+          Max: 1;
+          Step: 1;
+          Value: 1;
+          SliderStyle: $C.@DefaultSliderStyle;
+          NumberFieldStyle: $C.@DefaultInputFieldStyle;
+        }
+      }
+    }
+
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: $C.@DefaultButtonHeight);
+
+      $C.@TextButton #PickMove {
+        @Sounds = $Sounds.@SaveSettings;
+        FlexWeight: 1;
+        Text: "Offer";
+      }
+
+
+      Group {
+        Anchor: (Width: 12);
+      }
+
+      $C.@SecondaryTextButton #PickCancel {
+        @Sounds = $Sounds.@ButtonsCancel;
+        FlexWeight: 1;
+        Text: "Cancel";
+      }
+    }
+  }
+}

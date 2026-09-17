@@ -1,10 +1,12 @@
 package dev.galysso.obol.trade.trade;
 
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -14,6 +16,7 @@ import dev.galysso.obol.trade.TradeConfig;
 import org.joml.Vector3d;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -87,7 +90,7 @@ public final class TradeSessions {
             return;
         }
         World world = store.getExternalData().getWorld();
-        TradeSession session = new TradeSession(this, world, store, actor, target);
+        TradeSession session = new TradeSession(this, config, world, store, actor, target);
         if (byPlayer.putIfAbsent(actor.getUuid(), session) != null) {
             actor.sendMessage(Message.raw("You are already trading."));
             return;
@@ -162,12 +165,32 @@ public final class TradeSessions {
     }
 
     /**
-     * {@code uuid} left a world or the server: their trade, if any, is
-     * cancelled on its own thread. Safe from any thread.
+     * {@code uuid} is disconnecting: their trade, if any, is cancelled on
+     * its own thread. Safe from any thread. The disconnect event comes
+     * before the entity leaves its world, and the world runs what was
+     * queued first, so the escrow still finds an inventory to go back to.
      */
     public void playerLeft(UUID uuid) {
         TradeSession session = byPlayer.get(uuid);
         if (session != null) {
+            onWorld(session.world(), () -> session.playerGone(uuid));
+        }
+    }
+
+    /**
+     * {@code uuid} is being taken out of {@code world}, {@code holder} is
+     * what remains of their entity. On that world's thread: when the trade
+     * lives there, its escrow goes straight back into the holder, before
+     * the holder moves on or is saved.
+     */
+    public void playerLeft(UUID uuid, Holder<EntityStore> holder, World world) {
+        TradeSession session = byPlayer.get(uuid);
+        if (session == null) {
+            return;
+        }
+        if (session.world() == world && world.isInThread()) {
+            session.playerGone(uuid, holder);
+        } else {
             onWorld(session.world(), () -> session.playerGone(uuid));
         }
     }
@@ -178,6 +201,24 @@ public final class TradeSessions {
         for (TradeSession session : distinct) {
             onWorld(session.world(), () -> session.end(TradeSession.Reason.SHUTDOWN, null));
         }
+    }
+
+    /**
+     * Part of an escrow could not be given back: its owner has no entity
+     * anymore, or no room and no ground. Logged, so that an admin can make
+     * it right.
+     */
+    void lostEscrow(String owner, List<ItemStack> stacks) {
+        StringBuilder items = new StringBuilder();
+        for (ItemStack stack : stacks) {
+            items.append(' ').append(stack.getQuantity()).append('x').append(stack.getItemId());
+        }
+        logger.atWarning().log("Escrow of %s lost, nowhere to give it back:%s", owner, items);
+    }
+
+    /** TEMPORARY: traces what reaches the server while the grids are being tuned. */
+    void debug(String format, Object... args) {
+        logger.atInfo().log("[trade dbg] " + String.format(format, args));
     }
 
     /** Runs {@code task} on {@code world}'s thread, or logs when the world refuses. */
@@ -197,8 +238,9 @@ public final class TradeSessions {
 
     /**
      * Runs {@code action} with the player's entity on its world thread,
-     * following the player if they change world meanwhile, or
-     * {@code whenGone} if the player is no longer in any world.
+     * right away when this is that thread, following the player if they
+     * change world meanwhile, or {@code whenGone} if the player is no
+     * longer in any world.
      */
     void onWorldThread(PlayerRef playerRef, WorldAction action, Runnable whenGone) {
         Ref<EntityStore> ref = playerRef.getReference();
@@ -208,6 +250,12 @@ public final class TradeSessions {
         }
         Store<EntityStore> store = ref.getStore();
         World world = store.getExternalData().getWorld();
+        if (world.isInThread()) {
+            // Queueing would put us behind whatever is already queued, such
+            // as the removal of a disconnecting player's entity.
+            action.run(ref, store);
+            return;
+        }
         try {
             world.execute(() -> {
                 Ref<EntityStore> now = playerRef.getReference();

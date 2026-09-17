@@ -60,7 +60,7 @@ public class TradePlugin extends JavaPlugin {
         getEventRegistry().registerGlobal(RemovedPlayerFromWorldEvent.class, event -> {
             PlayerRef player = event.getHolder().getComponent(PlayerRef.getComponentType());
             if (player != null) {
-                sessions.playerLeft(player.getUuid());
+                sessions.playerLeft(player.getUuid(), event.getHolder(), event.getWorld());
             }
         });
         // In both modes: the step type must exist before our pack decodes.
@@ -77,9 +77,8 @@ public class TradePlugin extends JavaPlugin {
             hook = fallback.hookPlayers();
             getLogger().atInfo().log("Hail absent, F opens the trade directly");
         }
-        getLogger().atInfo().log("Trade ready (requests open %d s, max distance %.1f, %d offer slots, accept delay %d s)",
-                config.requestTimeoutSeconds(), config.maxDistance(), config.offerSlots(),
-                config.acceptDelaySeconds());
+        getLogger().atInfo().log("Trade ready (requests open %d s, max distance %.1f, accept delay %d s)",
+                config.requestTimeoutSeconds(), config.maxDistance(), config.acceptDelaySeconds());
     }
 
     @Override

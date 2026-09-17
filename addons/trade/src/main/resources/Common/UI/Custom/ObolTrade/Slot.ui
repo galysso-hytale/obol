@@ -1,0 +1,36 @@
+// One cell of a grid of the trade page (Trade.ui), appended by the server
+// once per slot of the container behind the grid: the slot background, a
+// button over it, and the stack when there is one. The server sets
+// "#Item.Visible", "#Item.ItemId", "#Item.Quantity" and
+// "#Item.ShowQuantity", binds #Cell (Activating and RightClicking) on the
+// player's own grids, and disables it on the other's offer.
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Width: 46, Height: 46);
+  Padding: (Full: 1);
+
+  Group {
+    Anchor: (Full: 0);
+    Background: "../Common/BlockSelectorSlotBackground.png";
+
+    ItemSlotButton #Cell {
+      Anchor: (Full: 0);
+      LayoutMode: Full;
+      Style: (
+        Default: (Background: #ffffff(0)),
+        Hovered: (Background: #ffffff(0.14)),
+        Pressed: (Background: #ffffff(0.26)),
+        Disabled: (Background: #ffffff(0)),
+        Sounds: $C.@ButtonSounds
+      );
+
+      ItemSlot #Item {
+        Anchor: (Full: 0);
+        Visible: false;
+        ShowQualityBackground: true;
+        ShowQuantity: true;
+      }
+    }
+  }
+}

@@ -13,7 +13,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 public final class TradeConfig {
 
     static final int MIN_TIMEOUT = 5;
-    static final int MAX_OFFER_SLOTS = 12;
 
     public static final BuilderCodec<TradeConfig> CODEC = BuilderCodec
             .builder(TradeConfig.class, TradeConfig::new)
@@ -33,16 +32,11 @@ public final class TradeConfig {
             .documentation("How long the Accept button stays disabled after either side changes "
                     + "the offer, in seconds. Guards against a last-instant swap.")
             .add()
-            .append(new KeyedCodec<>("OfferSlots", Codec.INTEGER),
-                    (c, v) -> c.offerSlots = v, c -> c.offerSlots)
-            .documentation("How many item stacks each side may offer, 1 to " + MAX_OFFER_SLOTS + ".")
-            .add()
             .build();
 
     int requestTimeoutSeconds = 30;
     double maxDistance = 8.0;
     int acceptDelaySeconds = 2;
-    int offerSlots = MAX_OFFER_SLOTS;
 
     public TradeConfig() {
     }
@@ -60,10 +54,5 @@ public final class TradeConfig {
     /** {@return how long Accept is disabled after a change, in seconds, never negative} */
     public int acceptDelaySeconds() {
         return Math.max(0, acceptDelaySeconds);
-    }
-
-    /** {@return how many stacks each side may offer, clamped to 1..{@value #MAX_OFFER_SLOTS}} */
-    public int offerSlots() {
-        return Math.clamp(offerSlots, 1, MAX_OFFER_SLOTS);
     }
 }

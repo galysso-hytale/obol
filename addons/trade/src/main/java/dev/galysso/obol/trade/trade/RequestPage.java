@@ -34,7 +34,7 @@ final class RequestPage extends SessionPage<ActionEvent> {
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, ActionEvent event) {
         if (event.is(ActionEvent.ACCEPT)) {
-            session.accept();
+            session.acceptRequest();
         } else {
             // Declining is closing: the session hears it through onDismiss.
             close();
