@@ -263,8 +263,10 @@ Two modules: `api` (`java-library`, published as
 jar at compile time only) and `core` (`com.azuredoom.hytale-tools`: the
 plugin, `manifest.json`, one jar that also contains `api`). `core/src/main/
 resources` is the asset pack (`Common/UI/Custom/Obol/<Tier>.{ui,png}` for
-the HUD, `Obol/Coins/<Tier>.ui` for `ObolUi`; the 64×64 originals are in
-`tmp/`). Identity and versions live in
+the HUD, `Obol/Coins/<Tier>.ui` for `ObolUi`). Generated assets (purse
+and lootbag items, halos, qualities, trade textures, the CurseForge logo)
+come from the Pillow scripts in `tools/`, see [tools/README.md](tools/README.md).
+Identity and versions live in
 `gradle.properties`; `manifest.json` is generated from it. Add-ons are
 sub-projects under `addons/` (`addons/purse`, `addons/lootbag`), each a plugin of its own with
 its own version, built and run alone or with everything else

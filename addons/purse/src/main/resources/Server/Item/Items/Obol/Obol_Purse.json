@@ -1,5 +1,5 @@
 {
-  "$Comment": "Genere par tmp/purse.py, ne pas editer a la main.",
+  "$Comment": "Genere par tools/purse.py, ne pas editer a la main.",
   "TranslationProperties": {
     "Name": "server.items.Obol_Purse.name",
     "Description": "server.items.Obol_Purse.description"

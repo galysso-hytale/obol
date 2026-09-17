@@ -1,5 +1,5 @@
 {
-  "$Comment": "Genere par tmp/lootbag.py, ne pas editer a la main.",
+  "$Comment": "Genere par tools/lootbag.py, ne pas editer a la main.",
   "Interactions": [
     {
       "Type": "ObolOpenLootbag",

@@ -9,6 +9,8 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.galysso.obol.api.Coins;
+import dev.galysso.obol.api.CoinsParseException;
 import dev.galysso.obol.api.Obol;
 import dev.galysso.obol.api.ObolUi;
 
@@ -16,6 +18,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalLong;
 
 /**
  * Obol as Aetherhaven's economy. Accounts are Obol wallets through the
@@ -57,6 +60,21 @@ final class ObolGoldProvider implements EconomyProvider {
     @Override
     public List<ItemStack> lootItems(@Nonnull String itemId, long amount) {
         return amount <= 0 ? List.of() : loot.items(itemId, amount);
+    }
+
+    /**
+     * What a player typed, in Obol's notation ({@code "2g 35s"}, a bare
+     * number is copper), as whole Aetherhaven coins rounded down: at the
+     * default rate {@code "12s"} is two coins and moves ten silver.
+     */
+    @Nonnull
+    @Override
+    public OptionalLong parseAmount(@Nonnull String text) {
+        try {
+            return OptionalLong.of(rate.toAetherhaven(Coins.parse(text)));
+        } catch (CoinsParseException e) {
+            return OptionalLong.empty();
+        }
     }
 
     @Nonnull

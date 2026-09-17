@@ -42,6 +42,8 @@ public class ObolAetherhavenPlugin extends JavaPlugin {
         // Until the lootbag slice: the configured coin item, absorbed on pickup later.
         provider = new ObolGoldProvider(rate, (itemId, amount) -> List.of(new ItemStack(itemId, (int) Math.min(amount, Integer.MAX_VALUE))));
         AetherhavenEconomy.register(provider);
+        // Coin items the game still makes (salvage, gifts, old stock) become coins on pickup.
+        getEntityStoreRegistry().registerSystem(new CoinItemAbsorbSystem(provider, rate, getLogger()));
         getLogger().atInfo().log("Aetherhaven pays in Obol coins, one gold coin = %s", rate.coin());
     }
 

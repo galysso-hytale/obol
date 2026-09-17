@@ -1,5 +1,5 @@
 {
-  "$Comment": "Genere par tmp/lootbag.py, ne pas editer a la main.",
+  "$Comment": "Genere par tools/lootbag.py, ne pas editer a la main.",
   "TranslationProperties": {
     "Name": "server.items.Obol_Lootbag.name",
     "Description": "server.items.Obol_Lootbag.description"
