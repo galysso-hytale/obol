@@ -19,6 +19,7 @@ sheets (`_*_apercu.png`, `_*_check.png`) go to `tmp/`, which is ignored.
 | `offer_panel.py` | addons/trade | The 9-patch behind "what I give". |
 | `offer_slot.py` | addons/trade | The tinted slot background of my offer. |
 | `curseforge.py <icon.png> [--tint <addon>]` | any | The mod page logo: the icon on the shared opaque plate, `curseforge.png` next to the icon. |
+| `coins_strip.py` | docs | The four coins in a row on the same plate, `docs/coins.png`, for the CurseForge description (`docs/curseforge.md`). |
 
 `purse.py`, `qualities.py`, `halos.py` and `offer_slot.py` read vanilla
 references from the game's `Assets.zip`, `backpack_tag.py` from the

@@ -289,3 +289,8 @@ The dev server links `core/run/mods/Galysso_obol` to
 yourself `obol.admin` (`core/run/permissions.json`,
 `users.<uuid>.groups = ["hytale:Admin"]`), `/obol give <you> 2g`: the HUD
 updates at once; restart: it comes back with the same amount.
+
+## License
+
+MIT, see [LICENSE](LICENSE). It covers everything in this repository:
+the API, the plugin, the add-ons and the compatibility mods.
