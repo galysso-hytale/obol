@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.api.Coins;
-import dev.galysso.obol.api.CoinsParseException;
 import dev.galysso.obol.api.Obol;
 import dev.galysso.obol.trade.TradeConfig;
 
@@ -88,8 +87,6 @@ public final class TradeSession {
         final List<EventRegistration<?, ?>> inventoryHooks = new ArrayList<>();
         /** The coins offered. */
         Coins coins = Coins.ZERO;
-        /** What the player last typed in the amount field, shown back on rebuild. */
-        String amountText = "";
         /** A word about the last refused action, shown until the next action. */
         String notice;
         /** The stack the quantity popup is open on, null when it is closed. */
@@ -328,33 +325,40 @@ public final class TradeSession {
     }
 
     /**
-     * The amount field of {@code side} reads {@code text}. Empty is
-     * nothing. Unreadable, or more than the balance, is nothing too, with
-     * a word under the page. The offer only changes when the amount does.
+     * {@code side} clicked a button adding {@code coins} to its offer.
+     * Nothing of it happens when the balance does not cover the offer so
+     * enlarged, with a word under the page. The page is redrawn either
+     * way, the client waits for that.
      */
-    void coins(Side side, Ref<EntityStore> ref, Store<EntityStore> store, String text) {
+    void offerCoins(Side side, Ref<EntityStore> ref, Store<EntityStore> store, Coins coins) {
         if (!live(side, ref, store)) {
             return;
         }
         side.notice = null;
-        side.amountText = text;
-        Coins wanted = Coins.ZERO;
-        String typed = text.strip();
-        if (!typed.isEmpty()) {
-            try {
-                wanted = Coins.parse(typed);
-            } catch (CoinsParseException e) {
-                side.notice = "Unreadable amount: write it like 2g 35s.";
-            }
-        }
-        if (side.notice == null && !wanted.equals(Coins.ZERO)) {
-            Coins balance = Obol.playerWallet(side.player.getUuid()).balance();
-            if (!balance.covers(wanted)) {
+        Coins wanted = side.coins.plus(coins);
+        Coins balance = Obol.playerWallet(side.player.getUuid()).balance();
+        if (coins.equals(Coins.ZERO) || !balance.covers(wanted)) {
+            if (!coins.equals(Coins.ZERO)) {
                 side.notice = "Not enough: you have " + balance + ".";
-                wanted = Coins.ZERO;
             }
+            refresh(side);
+            return;
         }
-        if (wanted.equals(side.coins)) {
+        side.coins = wanted;
+        changed();
+    }
+
+    /**
+     * {@code side} clicked a button taking {@code coins} back from its
+     * offer. Nothing of it happens when the offer holds less.
+     */
+    void takeCoins(Side side, Ref<EntityStore> ref, Store<EntityStore> store, Coins coins) {
+        if (!live(side, ref, store)) {
+            return;
+        }
+        side.notice = null;
+        Coins wanted = side.coins.minus(coins).orElse(null);
+        if (coins.equals(Coins.ZERO) || wanted == null) {
             refresh(side);
             return;
         }

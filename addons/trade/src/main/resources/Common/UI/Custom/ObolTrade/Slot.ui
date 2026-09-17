@@ -9,14 +9,19 @@
 // RightClicking) on the player's own grids, and disables it on the
 // other's offer.
 //
-// Two marks tell the backpack apart: #Tint, a leather wash under the
-// item, on every cell of the backpack grid and on the offer cells whose
-// stack came from the backpack, and #Tag, the inventory's backpack icon
-// on a dark square flush with the slot's top-left corner, its bottom-right
-// corner rounded (BackpackTag.png, composed by tmp/backpack_tag.py), on
-// those offer cells only. The server shows both. (One image on purpose:
-// an ItemSlot would paint its own opaque slot behind the icon, and the
-// client's inventory icons are not reachable from Common/UI/Custom.)
+// Three marks sit on the slot background. #Zone, the slot's own shape
+// in the offer's yellow (OfferSlotBackground.png, composed by
+// tmp/offer_slot.py), on every cell of my offer grid: an empty cell says
+// there is room in what I give, a stack covers it with its quality
+// square as anywhere else. Two tell the backpack apart: #Tint, a leather
+// wash under the item, on every cell of the backpack grid and on the
+// offer cells whose stack came from the backpack, and #Tag, the
+// inventory's backpack icon on a dark square flush with the slot's
+// top-left corner, its bottom-right corner rounded (BackpackTag.png,
+// composed by tmp/backpack_tag.py), on those offer cells only. The
+// server shows all three. (Images on purpose: an ItemSlot would paint
+// its own opaque slot behind the icon, and the client's inventory icons
+// are not reachable from Common/UI/Custom.)
 $C = "../Common.ui";
 
 Group {
@@ -26,6 +31,12 @@ Group {
   Group {
     Anchor: (Full: 0);
     Background: "../Common/BlockSelectorSlotBackground.png";
+
+    Group #Zone {
+      Anchor: (Full: 0);
+      Background: "OfferSlotBackground.png";
+      Visible: false;
+    }
 
     Group #Tint {
       Anchor: (Full: 0);

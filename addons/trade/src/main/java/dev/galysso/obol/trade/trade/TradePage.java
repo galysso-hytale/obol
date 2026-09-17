@@ -13,16 +13,19 @@ import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.CoinsStyle;
+import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.Obol;
 import dev.galysso.obol.api.ObolUi;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
  * The trade, one page, the same on both sides: my offer, the other's
- * offer, my coins to type, my inventory and my backpack, Accept, Cancel.
+ * offer, the coin rows, my inventory and my backpack, Accept, Cancel.
  *
  * <p>Two gestures, on my offer, my inventory and my backpack: a click
  * on a stack opens the quantity popup ({@code #Pick}) on it, a slider
@@ -41,8 +44,11 @@ import java.util.Map;
  * on a custom page it reports no plain click, only a drop after picking
  * the stack up in hand.)</p>
  *
- * <p>Every amount is drawn by Obol ({@link ObolUi}): the page never draws
- * a coin itself. Accept is disabled while a change is fresh, once clicked,
+ * <p>The coins are offered with buttons, as in the purse: two columns
+ * under my offer, what I keep and what I give, one row per tier in each
+ * with the buttons moving 1 and 10 of that tier across. The buttons that
+ * cannot apply are disabled. Every amount is drawn by Obol
+ * ({@link ObolUi}): the page never draws a coin itself. Accept is disabled while a change is fresh, once clicked,
  * and while there is nothing to trade. Cancel, or closing the page any
  * other way, cancels the trade for both.</p>
  */
@@ -62,10 +68,17 @@ final class TradePage extends SessionPage<ActionEvent> {
     /** Cells per row of a grid, and the side of a cell, as Slot.ui draws it. */
     private static final int COLUMNS = 9;
     private static final int CELL_SIZE = 46;
-    /** The coin rows read from their label: pack left. */
+    /** The other's coins read from their label: pack left. */
     private static final CoinsStyle LEFT = CoinsStyle.DEFAULT.withAlignment(CoinsStyle.Alignment.START);
+    /** The two coin columns under my offer, and their rows' coins packed against the buttons. */
+    private static final String KEEP = "#Mine #Keep";
+    private static final String GIVE = "#Mine #Give";
+    private static final CoinsStyle KEEP_STYLE = CoinsStyle.DEFAULT.withAlignment(CoinsStyle.Alignment.END);
+    private static final CoinsStyle GIVE_STYLE = LEFT;
+    /** How many coins of a tier one button moves. */
+    private static final int[] STEPS = {1, 10};
 
-    /** What each cell last showed, by its selector, so that an update sends only what changed. */
+    /** What each cell and coin group last showed, by its selector, so that an update sends only what changed. */
     private final Map<String, String> shown = new HashMap<>();
     /** How many cells the backpack grid was built with: another capacity means a rebuild. */
     private int backpackCells;
@@ -80,12 +93,14 @@ final class TradePage extends SessionPage<ActionEvent> {
         commands.append(DOCUMENT);
         commands.set("#Heading.Text", "Trade with " + other);
         commands.set("#Theirs #Caption.Text", other + "'s offer");
-        commands.set("#Amount.Value", side.amountText);
-        ObolUi.show(commands, "#Balance", Obol.playerWallet(playerRef.getUuid()).balance(), LEFT);
         cells(commands, events, ref, store);
+        for (Denomination tier : Denomination.values()) {
+            for (int step : STEPS) {
+                bindCoins(events, coinRow(KEEP, tier) + " #Put" + step, ActionEvent.OFFER_COINS, tier, step);
+                bindCoins(events, coinRow(GIVE, tier) + " #Take" + step, ActionEvent.TAKE_COINS, tier, step);
+            }
+        }
         state(commands, ref, store);
-        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#Amount",
-                EventData.of(ActionEvent.ACTION, ActionEvent.COINS).append(ActionEvent.AMOUNT, "#Amount.Value"));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#AcceptButton",
                 EventData.of(ActionEvent.ACTION, ActionEvent.ACCEPT));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton",
@@ -127,8 +142,9 @@ final class TradePage extends SessionPage<ActionEvent> {
      * Appends one cell per slot to each grid, and binds the cells of my
      * grids: a click and a right-click both send the grid and the slot.
      * Their cells are left disabled. The backpack grid takes the height
-     * of its rows, and its column goes when there is no backpack. Done
-     * once, when the page is built.
+     * of its rows, and its column goes when there is no backpack. My
+     * offer's cells carry the offer's yellow, the backpack's its tint.
+     * Done once, when the page is built.
      */
     private void cells(UICommandBuilder commands, UIEventBuilder events, Ref<EntityStore> ref, Store<EntityStore> store) {
         shown.clear();
@@ -144,6 +160,9 @@ final class TradePage extends SessionPage<ActionEvent> {
                 commands.append(grid, CELL);
                 if (BACKPACK.equals(grid)) {
                     commands.set(cell(grid, slot) + " #Tint.Visible", true);
+                }
+                if (MY_OFFER.equals(grid)) {
+                    commands.set(cell(grid, slot) + " #Zone.Visible", true);
                 }
                 String button = cell(grid, slot) + " #Cell";
                 events.addEventBinding(CustomUIEventBindingType.Activating, button,
@@ -182,9 +201,22 @@ final class TradePage extends SessionPage<ActionEvent> {
         return container == null ? 0 : container.getCapacity();
     }
 
+    /** {@return the selector of the row of {@code tier} in {@code column}, {@link #KEEP} or {@link #GIVE}} */
+    private static String coinRow(String column, Denomination tier) {
+        String name = tier.name();
+        return column + " #" + name.charAt(0) + name.substring(1).toLowerCase(Locale.ROOT);
+    }
+
+    private static void bindCoins(UIEventBuilder events, String selector, String action, Denomination tier, int step) {
+        events.addEventBinding(CustomUIEventBindingType.Activating, selector,
+                EventData.of(ActionEvent.ACTION, action)
+                        .append(ActionEvent.TIER, tier.name())
+                        .append(ActionEvent.COUNT, Integer.toString(step)));
+    }
+
     /**
-     * What moves during the trade: the five grids, the offered coins,
-     * Accept, the status, the notice, the popup.
+     * What moves during the trade: the five grids, the coin rows, the
+     * other's coins, Accept, the status, the notice, the popup.
      */
     private void state(UICommandBuilder commands, Ref<EntityStore> ref, Store<EntityStore> store) {
         TradeSession.Side theirs = session.other(side);
@@ -193,10 +225,11 @@ final class TradePage extends SessionPage<ActionEvent> {
             fill(commands, grid, container(grid, ref, store));
         }
         fill(commands, THEIR_OFFER, theirs.offer);
-        commands.clear("#MyCoins");
-        ObolUi.show(commands, "#MyCoins", side.coins, LEFT);
-        commands.clear("#TheirCoins");
-        ObolUi.show(commands, "#TheirCoins", theirs.coins, LEFT);
+        coinRows(commands);
+        if (!theirs.coins.toString().equals(shown.put("#TheirCoins", theirs.coins.toString()))) {
+            commands.clear("#TheirCoins");
+            ObolUi.show(commands, "#TheirCoins", theirs.coins, LEFT);
+        }
         boolean canAccept = !side.accepted && !session.locked() && !session.nothingToTrade();
         commands.set("#AcceptButton.Text", side.accepted ? "Accepted" : "Accept");
         commands.set("#AcceptButton.Disabled", !canAccept);
@@ -218,6 +251,38 @@ final class TradePage extends SessionPage<ActionEvent> {
         }
     }
 
+
+    /**
+     * The coin columns: for each tier, what I keep (the balance less the
+     * offer), what I give, and the buttons that apply. A count is sent
+     * again only when it changed. A button moving coins into the offer
+     * applies while the balance covers the offer plus those coins, one
+     * moving them back while the offer holds them.
+     */
+    private void coinRows(UICommandBuilder commands) {
+        Coins balance = Obol.playerWallet(playerRef.getUuid()).balance();
+        Map<Denomination, Long> keep = balance.minus(side.coins).orElse(Coins.ZERO).breakdown();
+        Map<Denomination, Long> give = side.coins.breakdown();
+        for (Denomination tier : Denomination.values()) {
+            coins(commands, coinRow(KEEP, tier) + " #Coins", tier, keep.get(tier), KEEP_STYLE);
+            coins(commands, coinRow(GIVE, tier) + " #Coins", tier, give.get(tier), GIVE_STYLE);
+            for (int step : STEPS) {
+                Coins coins = Coins.of(tier, step);
+                commands.set(coinRow(KEEP, tier) + " #Put" + step + ".Disabled", !balance.covers(side.coins.plus(coins)));
+                commands.set(coinRow(GIVE, tier) + " #Take" + step + ".Disabled", !side.coins.covers(coins));
+            }
+        }
+    }
+
+    /** Draws {@code count} of {@code tier} into {@code selector}, unless it already shows that. */
+    private void coins(UICommandBuilder commands, String selector, Denomination tier, long count, CoinsStyle style) {
+        String now = Long.toString(count);
+        if (now.equals(shown.put(selector, now))) {
+            return;
+        }
+        commands.clear(selector);
+        ObolUi.show(commands, selector, tier, count, style);
+    }
 
     /**
      * Sends the cells of {@code grid} that no longer show what
@@ -254,8 +319,10 @@ final class TradePage extends SessionPage<ActionEvent> {
 
     @Override
     public void handleDataEvent(Ref<EntityStore> ref, Store<EntityStore> store, ActionEvent event) {
-        if (event.is(ActionEvent.COINS)) {
-            session.coins(side, ref, store, event.amount());
+        if (event.is(ActionEvent.OFFER_COINS)) {
+            session.offerCoins(side, ref, store, event.coins());
+        } else if (event.is(ActionEvent.TAKE_COINS)) {
+            session.takeCoins(side, ref, store, event.coins());
         } else if (event.is(ActionEvent.ACCEPT)) {
             session.acceptOffer(side, ref, store);
         } else if (event.is(ActionEvent.PICK)) {

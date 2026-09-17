@@ -1,8 +1,8 @@
 // The trade page (TradePage), the same on both sides: my offer on the
-// left (#Mine), the other's on the right (#Theirs), my inventory below
-// (#Storage over #Hotbar) with my backpack beside it (#Backpack, its
-// column #BackpackColumn hidden when I carry none), then a notice line
-// and Cancel.
+// left (#Mine) with the coin rows under it, the other's on the right
+// (#Theirs), my inventory below (#Storage over #Hotbar) with my backpack
+// beside it (#Backpack, its column #BackpackColumn hidden when I carry
+// none), then a notice line and Cancel.
 //
 // The five grids (#MyOffer, #TheirOffer, #Storage, #Hotbar, #Backpack)
 // are groups the server fills with one Slot.ui per slot, wrapped into
@@ -18,16 +18,34 @@
 // page it reports no plain click, only a drop after picking the stack up
 // in hand.
 //
-// The server also sets #Heading, "#Theirs #Caption", "#Amount.Value", the
-// text and Disabled of #AcceptButton, #TheirStatus, #Notice, draws the
-// coins through Obol (ObolUi.show into #MyCoins, #Balance and
-// #TheirCoins), and binds #Amount (ValueChanged), #AcceptButton and
-// #CancelButton.
+// The coins I offer are moved with buttons, in two columns under my
+// offer, what I keep and what I give, one row per tier in each ("#Mine
+// #Keep #Gold #Put1" and the like, see there): the server fills the
+// rows, disables the buttons that cannot apply and binds them.
+//
+// The server also sets #Heading, "#Theirs #Caption", the text and
+// Disabled of #AcceptButton, #TheirStatus, #Notice, draws the coins
+// through Obol (ObolUi.show into the rows and #TheirCoins), and binds
+// #AcceptButton and #CancelButton.
 $C = "../Common.ui";
 $Sounds = "../Sounds.ui";
 
 @Caption = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, HorizontalAlignment: Center, RenderUppercase: true, RenderBold: true, FontSize: 13);
 @Small = (...$C.@DefaultLabelStyle, VerticalAlignment: Center, TextColor: #ffffff(0.6));
+// What I give is yellow: the empty cells of my offer grid (the server
+// shows #Zone of Slot.ui on them, the slot's shape in that yellow, as the
+// game marks its special slots by their background), the coins column
+// under it on a panel with rounded corners (OfferPanel.png, a 9-patch
+// composed by tmp/offer_panel.py, its Border the corner radius), and
+// its caption.
+@OfferPanel = (TexturePath: "OfferPanel.png", Border: 8);
+@GiveColor = #ffcc00(0.85);
+// The coin rows: their height, the width of one of their buttons, the gap
+// between the buttons and the coins, and the gap between the two columns.
+@CoinRow = 32;
+@CoinButton = 50;
+@Gap = 10;
+@ColumnGap = 8;
 // A grid: cells of 46 (Slot.ui), wrapped by the width.
 @Grid = Group {
   LayoutMode: LeftCenterWrap;
@@ -81,50 +99,215 @@ $C.@PageOverlay {
             }
           }
 
-          // The coins I offer: typed, checked by the server as I type.
+          // The coins, as the purse's two panels: on the left what I keep
+          // (#Keep), on the right what I give (#Give), in the yellow of
+          // the offer's cells above so that everything I part with reads
+          // as one. One row per tier in each, largest first,
+          // the coins packed against the buttons, which mirror each other
+          // around the gap, the ones next to it: "1 >" and "10 >" in
+          // #Keep push that many into the offer, "< 1" and "< 10" in
+          // #Give take them back. The server fills "#Keep #Gold #Coins"
+          // and "#Give #Gold #Coins", disables the buttons that cannot
+          // apply and binds them.
           Group {
             LayoutMode: Left;
-            Anchor: (Height: 38, Top: 8);
+            Anchor: (Top: 8, Bottom: 8);
 
-            Label {
-              Text: "Coins";
-              Anchor: (Width: 48);
-              Style: @Small;
-            }
-
-            $C.@TextField #Amount {
+            Group #Keep {
+              LayoutMode: Top;
               FlexWeight: 1;
-              PlaceholderText: "e.g. 2g 35s";
+              Padding: (Vertical: 6, Horizontal: 8);
+
+              Label {
+                Text: "You keep";
+                Anchor: (Height: 16);
+                Style: (...@Caption, TextColor: #ffffff(0.6));
+              }
+
+              Group #Mythril {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+
+                $C.@SmallSecondaryTextButton #Put10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Left: @Gap, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "10 >";
+                }
+
+                $C.@SmallSecondaryTextButton #Put1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight);
+                  Padding: (Horizontal: 4);
+                  Text: "1 >";
+                }
+              }
+
+              Group #Gold {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+
+                $C.@SmallSecondaryTextButton #Put10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Left: @Gap, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "10 >";
+                }
+
+                $C.@SmallSecondaryTextButton #Put1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight);
+                  Padding: (Horizontal: 4);
+                  Text: "1 >";
+                }
+              }
+
+              Group #Silver {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+
+                $C.@SmallSecondaryTextButton #Put10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Left: @Gap, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "10 >";
+                }
+
+                $C.@SmallSecondaryTextButton #Put1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight);
+                  Padding: (Horizontal: 4);
+                  Text: "1 >";
+                }
+              }
+
+              Group #Copper {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+
+                $C.@SmallSecondaryTextButton #Put10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Left: @Gap, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "10 >";
+                }
+
+                $C.@SmallSecondaryTextButton #Put1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight);
+                  Padding: (Horizontal: 4);
+                  Text: "1 >";
+                }
+              }
             }
-          }
 
-          Group {
-            LayoutMode: Left;
-            Anchor: (Height: 26, Top: 4);
-
-            Label {
-              Text: "Offered";
-              Anchor: (Width: 48);
-              Style: @Small;
+            Group {
+              Anchor: (Width: @ColumnGap);
             }
 
-            Group #MyCoins {
+            Group #Give {
+              LayoutMode: Top;
               FlexWeight: 1;
-            }
-          }
+              Background: @OfferPanel;
+              Padding: (Vertical: 6, Horizontal: 8);
 
-          Group {
-            LayoutMode: Left;
-            Anchor: (Height: 26, Bottom: 8);
+              Label {
+                Text: "You give";
+                Anchor: (Height: 16);
+                Style: (...@Caption, TextColor: @GiveColor);
+              }
 
-            Label {
-              Text: "You have";
-              Anchor: (Width: 48);
-              Style: @Small;
-            }
+              Group #Mythril {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
 
-            Group #Balance {
-              FlexWeight: 1;
+                $C.@SmallSecondaryTextButton #Take1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "< 1";
+                }
+
+                $C.@SmallSecondaryTextButton #Take10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: @Gap);
+                  Padding: (Horizontal: 4);
+                  Text: "< 10";
+                }
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+              }
+
+              Group #Gold {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
+
+                $C.@SmallSecondaryTextButton #Take1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "< 1";
+                }
+
+                $C.@SmallSecondaryTextButton #Take10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: @Gap);
+                  Padding: (Horizontal: 4);
+                  Text: "< 10";
+                }
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+              }
+
+              Group #Silver {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
+
+                $C.@SmallSecondaryTextButton #Take1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "< 1";
+                }
+
+                $C.@SmallSecondaryTextButton #Take10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: @Gap);
+                  Padding: (Horizontal: 4);
+                  Text: "< 10";
+                }
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+              }
+
+              Group #Copper {
+                LayoutMode: Left;
+                Anchor: (Height: @CoinRow, Top: 4);
+
+                $C.@SmallSecondaryTextButton #Take1 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: 4);
+                  Padding: (Horizontal: 4);
+                  Text: "< 1";
+                }
+
+                $C.@SmallSecondaryTextButton #Take10 {
+                  Anchor: (Width: @CoinButton, Height: $C.@SmallButtonHeight, Right: @Gap);
+                  Padding: (Horizontal: 4);
+                  Text: "< 10";
+                }
+
+                Group #Coins {
+                  FlexWeight: 1;
+                }
+              }
             }
           }
 
@@ -173,8 +356,8 @@ $C.@PageOverlay {
             }
           }
 
-          // Fills what the two coin rows take on the left, so that the
-          // status sits level with Accept.
+          // Fills what the coin rows take on the left, so that the status
+          // sits level with Accept.
           Group {
             FlexWeight: 1;
           }
