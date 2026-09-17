@@ -2,6 +2,7 @@ package dev.galysso.obol.compat.aetherhaven;
 
 import com.hexvane.aetherhaven.economy.api.EconomyProvider;
 import com.hexvane.aetherhaven.economy.api.GoldAccount;
+import com.hexvane.aetherhaven.economy.api.LootSource;
 import com.hexvane.aetherhaven.economy.api.Transfer;
 import com.hexvane.aetherhaven.town.TownRecord;
 import com.hypixel.hytale.component.Ref;
@@ -28,7 +29,7 @@ import java.util.UUID;
  * Obol as Aetherhaven's economy. Accounts are Obol wallets through the
  * {@link Rate} (a player's own, one per town treasury, one per shop safe),
  * amounts are written and drawn as Obol coins, and gold loot is whatever
- * {@link GoldLoot} makes of the value.
+ * {@link GoldLoot} makes of the roll: never coin items, Obol has no item.
  *
  * <p>The rate converts what Aetherhaven counts in its coins: prices, the
  * tithe, loot. What is stored is Obol coins, and a transfer a player asks
@@ -37,9 +38,9 @@ import java.util.UUID;
  */
 final class ObolGoldProvider implements EconomyProvider {
 
-    /** Aetherhaven gold worth {@code coins}, as items to place in a chest or drop. */
+    /** What {@code amount} Aetherhaven gold of loot from {@code source} becomes, as items to place or drop, or nothing. */
     interface GoldLoot {
-        List<ItemStack> items(String itemId, long amount);
+        List<ItemStack> items(LootSource source, long amount);
     }
 
     /** Wallet kinds of the town ledgers, keyed by the town's UUID, and by town and player for a safe. */
@@ -84,8 +85,8 @@ final class ObolGoldProvider implements EconomyProvider {
 
     @Nonnull
     @Override
-    public List<ItemStack> lootItems(@Nonnull String itemId, long amount) {
-        return amount <= 0 ? List.of() : loot.items(itemId, amount);
+    public List<ItemStack> lootItems(@Nonnull LootSource source, @Nonnull String itemId, long amount) {
+        return amount <= 0 ? List.of() : loot.items(source, amount);
     }
 
     /**

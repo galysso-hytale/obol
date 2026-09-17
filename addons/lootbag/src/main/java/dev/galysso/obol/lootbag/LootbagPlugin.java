@@ -67,6 +67,8 @@ public class LootbagPlugin extends JavaPlugin {
                 getLogger().atWarning().log("lootbag.json, %s: %s", key, problem));
         drops.resolve((key, problem) ->
                 getLogger().atWarning().log("drops.json, %s: %s", key, problem));
+        // Bags other mods hand out through LootbagItem follow this file too.
+        LootbagConfig.install(config);
         LootbagOps ops = new LootbagOps(config, getLogger());
         // Before the assets are read: the items and tables that name them
         // are decoded with the rest of the pack.

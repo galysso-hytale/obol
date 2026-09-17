@@ -7,6 +7,7 @@ import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.CoinsParseException;
 import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.lootbag.LootLaw;
+import dev.galysso.obol.lootbag.LootbagConfig;
 import dev.galysso.obol.lootbag.LootbagConfig.OpenOn;
 import dev.galysso.obol.lootbag.Rarity;
 import org.bson.BsonDocument;
@@ -20,6 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * What a lootbag is, as an item: how to recognise one, how to read its
@@ -44,8 +46,10 @@ import java.util.Optional;
  * {@code ObolLootbag} container) is a fallback bag: it rolls the law its
  * rarity has in {@code lootbag.json} and shows the pack's fallback text.</p>
  *
- * <p>Public so that another mod can hand out lootbags (a quest reward) the
- * same way the drop tables do.</p>
+ * <p>Public so that another mod can hand out lootbags (a quest reward, a
+ * loot of its own turned into coins) the same way the drop tables do:
+ * {@link #rarityOf} names the rarity of a value under this server's laws,
+ * and {@link #bag} writes a bag of a rarity as the tables write theirs.</p>
  */
 public final class LootbagItem {
 
@@ -128,6 +132,25 @@ public final class LootbagItem {
         }
     }
 
+    /**
+     * {@return the rarity whose law on this server reaches {@code amount}:
+     * the lowest rarity whose maximum is at least the amount, the highest
+     * rarity beyond every law}
+     * With the default laws, up to 50 copper is Common, up to 5 silver
+     * Uncommon, up to 50 silver Rare, up to 5 gold Epic, Legendary above.
+     */
+    public static Rarity rarityOf(Coins amount) {
+        Objects.requireNonNull(amount, "amount");
+        LootbagConfig config = LootbagConfig.server();
+        Rarity[] all = Rarity.values();
+        for (Rarity rarity : all) {
+            if (amount.compareTo(config.law(rarity).max()) <= 0) {
+                return rarity;
+            }
+        }
+        return all[all.length - 1];
+    }
+
     /** {@return the item id of the bag of that rarity} */
     public static String itemId(Rarity rarity) {
         return Objects.requireNonNull(rarity, "rarity").itemId();
@@ -144,6 +167,25 @@ public final class LootbagItem {
      */
     public static ItemStack stack(Rarity rarity, int quantity) {
         return new ItemStack(itemId(rarity), checkQuantity(quantity));
+    }
+
+    /**
+     * {@return one bag of that rarity as this server's drop tables make
+     * them}
+     * The rarity's law of {@code lootbag.json}, rolled now into a fixed
+     * amount when {@code RevealAmount} is on, and the tooltip of the
+     * server's {@code OpenOn}: the same stack as the tables drop, so it
+     * stacks with theirs. The defaults until the lootbag plugin has set
+     * up.
+     */
+    public static ItemStack bag(Rarity rarity) {
+        Objects.requireNonNull(rarity, "rarity");
+        LootbagConfig config = LootbagConfig.server();
+        LootLaw law = config.law(rarity);
+        if (config.revealAmount()) {
+            law = LootLaw.fixed(law.roll(ThreadLocalRandom.current()::nextDouble));
+        }
+        return stack(rarity, law, 1, config.openOn());
     }
 
     /**

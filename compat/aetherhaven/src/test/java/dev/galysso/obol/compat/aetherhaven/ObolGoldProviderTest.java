@@ -36,7 +36,7 @@ class ObolGoldProviderTest {
         @Override public void clear() { balance = Coins.ZERO; }
     }
 
-    private final ObolGoldProvider provider = new ObolGoldProvider(Rate.DEFAULT, (itemId, amount) -> List.of());
+    private final ObolGoldProvider provider = new ObolGoldProvider(Rate.DEFAULT, (source, amount) -> List.of());
     private final MemoryWallet player = new MemoryWallet();
     private final MemoryWallet treasury = new MemoryWallet();
     private final ObolGoldAccount from = new ObolGoldAccount(player, Rate.DEFAULT);

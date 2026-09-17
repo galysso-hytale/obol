@@ -56,16 +56,25 @@ dependencies {
     }
 }
 
-// Rate and ObolGoldAccount are plain JDK code over Obol's API: unit-tested
-// here with a fake backend, no server running.
+// Rate, ObolGoldAccount and LootbagLoot are plain JDK code over Obol's
+// API and the lootbag's: unit-tested here with a fake backend, no server
+// running.
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter("5.13.4")
             dependencies {
                 implementation(project(":api"))
+                implementation(project(":addons:lootbag"))
                 implementation(files(aetherhavenJar))
                 implementation("com.hypixel.hytale:Server:0.+")
+            }
+            targets.all {
+                testTask.configure {
+                    // ItemStack's class init reaches the game's logger, which
+                    // needs its log manager to be the JVM's.
+                    systemProperty("java.util.logging.manager", "com.hypixel.hytale.logger.backend.HytaleLogManager")
+                }
             }
         }
     }

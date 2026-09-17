@@ -9,6 +9,7 @@ import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
@@ -20,6 +21,10 @@ import java.util.function.BiConsumer;
  * a rarity writes into the bag and what a bag without a law rolls.
  * Where the bags fall is another file, {@code drops.json}
  * ({@link DropsConfig}).</p>
+ *
+ * <p>The settings in force on this server are {@link #server()}: what the
+ * plugin resolved at setup, the defaults before then. That is what a bag
+ * handed out by another mod through {@code LootbagItem} follows.</p>
  */
 public final class LootbagConfig {
 
@@ -54,6 +59,8 @@ public final class LootbagConfig {
             .add()
             .build();
 
+    private static volatile LootbagConfig server = defaults();
+
     OpenOn openOn = OpenOn.Use;
     boolean revealAmount = false;
     Map<String, LootLawSpec> rarities = defaultRarities();
@@ -62,6 +69,22 @@ public final class LootbagConfig {
     private Map<Rarity, LootLaw> laws;
 
     public LootbagConfig() {
+    }
+
+    /** {@return the settings in force on this server, the defaults until the lootbag plugin has set up} */
+    public static LootbagConfig server() {
+        return server;
+    }
+
+    /** Makes {@code config}, resolved, the server's settings. The plugin's, at setup. */
+    static void install(LootbagConfig config) {
+        server = Objects.requireNonNull(config, "config");
+    }
+
+    private static LootbagConfig defaults() {
+        LootbagConfig config = new LootbagConfig();
+        config.resolve((key, problem) -> { });
+        return config;
     }
 
     private static Map<String, LootLawSpec> defaultRarities() {
