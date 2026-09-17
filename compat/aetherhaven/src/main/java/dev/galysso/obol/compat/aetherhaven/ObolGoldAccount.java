@@ -6,9 +6,13 @@ import dev.galysso.obol.api.Wallet;
 import java.util.Objects;
 
 /**
- * A player's Obol wallet seen as Aetherhaven gold: the balance is the
- * wallet's, converted through the {@link Rate} and rounded down, and every
- * withdrawal or deposit moves the converted amount on the wallet.
+ * An Obol wallet (a player's, a town treasury's, a shop safe's) seen as
+ * Aetherhaven gold: the balance is the wallet's, converted through the
+ * {@link Rate} and rounded down, and every withdrawal or deposit moves the
+ * converted amount on the wallet. The rate touches only what Aetherhaven
+ * counts in coins (a price, the tithe): the wallet itself holds Obol coins,
+ * at Obol's precision, and {@link ObolGoldProvider#transfer} moves between
+ * two wallets without it.
  */
 final class ObolGoldAccount implements GoldAccount {
 
@@ -18,6 +22,10 @@ final class ObolGoldAccount implements GoldAccount {
     ObolGoldAccount(Wallet wallet, Rate rate) {
         this.wallet = Objects.requireNonNull(wallet, "wallet");
         this.rate = Objects.requireNonNull(rate, "rate");
+    }
+
+    Wallet wallet() {
+        return wallet;
     }
 
     @Override
