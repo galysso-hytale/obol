@@ -6,11 +6,11 @@ Une rarete (ItemQuality) par palier de pieces, Obol_Copper a Obol_Mythril :
 c'est le canal du jeu pour « cet objet vaut quelque chose », et il tient
 tout ensemble, cadre de la case d'inventaire, cadre et couleur du nom dans
 le tooltip, etiquette sous le nom, halo au sol. Chaque etat de la bourse
-(tmp/purse.py) declare la sienne, comme les poissons vanilla declarent une
+(tools/purse.py) declare la sienne, comme les poissons vanilla declarent une
 rarete par etat.
 
 Chaque rarete copie une rarete vanilla (Uncommon pour le cuivre, jusqu'a
-Legendary pour le mythril, la meme echelle que les halos de tmp/halos.py),
+Legendary pour le mythril, la meme echelle que les halos de tools/halos.py),
 avec ses textures recolorees : chaque pixel est converti en HSL, la teinte
 devient celle de la piece, la saturation est ponderee par la sienne,
 luminosite et alpha sont gardes (d'une rarete vanilla a l'autre, seule la
@@ -26,7 +26,7 @@ Produit dans addons/purse/src/main/resources/ :
 Le jeu ne livre ces textures qu'en @2x et les cite sans le suffixe dans les
 JSON : on livre les deux tailles, l'@2x recoloree et la simple reduite de
 moitie. Les etiquettes (general.qualities.Obol_<Palier>) sont dans
-server.lang, ecrit par tmp/purse.py. Deterministe, Pillow seulement.
+server.lang, ecrit par tools/purse.py. Deterministe, Pillow seulement.
 """
 
 import colorsys

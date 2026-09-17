@@ -13,8 +13,8 @@ La bourse vide est plate, cordon de cuir sombre. Une bourse qui contient
 quelque chose est rebondie, et son cordon prend la couleur de la piece
 (Denomination.color() dans l'API d'Obol) : la silhouette dit « il y a
 quelque chose », le cordon dit quoi. Chaque etat porte aussi une rarete a
-la couleur de la piece (tmp/qualities.py : cadre de la case et du tooltip)
-et un halo au sol (tmp/halos.py).
+la couleur de la piece (tools/qualities.py : cadre de la case et du tooltip)
+et un halo au sol (tools/halos.py).
 
 Produit dans addons/purse/src/main/resources/ :
   Common/Items/Obol/Purse.blockymodel               bourse vide, plate
@@ -596,9 +596,9 @@ def item_json():
     Les quatre etats ("State", comme le seau vanilla Container_Bucket.json)
     heritent de tout le reste et ne changent que le visuel : modele plein,
     texture et icone du palier, rarete du palier (Obol_<Palier>, de
-    tmp/qualities.py : cadre de la case, cadre et couleur du nom dans le
+    tools/qualities.py : cadre de la case, cadre et couleur du nom dans le
     tooltip, etiquette), halo au sol (ItemEntity.ParticleSystemId, systemes
-    de tmp/halos.py, le meme que celui de la rarete), et une lueur faible
+    de tools/halos.py, le meme que celui de la rarete), et une lueur faible
     sur Mythril. Le serveur
     les charge sous l'id "*Obol_Purse_<Palier>" et le plugin y passe par
     ItemStack.withState("<Palier>"). "Recipe": null pour qu'on ne puisse
@@ -623,7 +623,7 @@ def item_json():
             state["Light"] = {"Color": MYTHRIL_GLOW, "Radius": 1}
         states[tier] = state
     return {
-        "$Comment": "Genere par tmp/purse.py, ne pas editer a la main.",
+        "$Comment": "Genere par tools/purse.py, ne pas editer a la main.",
         "TranslationProperties": {
             "Name": "server.items.Obol_Purse.name",
             "Description": "server.items.Obol_Purse.description",
