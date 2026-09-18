@@ -1,5 +1,6 @@
 package dev.galysso.obol.compat.aetherhaven;
 
+import com.hexvane.aetherhaven.economy.api.Balance;
 import com.hexvane.aetherhaven.economy.api.Transfer;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUICommand;
 import com.hypixel.hytale.server.core.Message;
@@ -21,6 +22,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ObolGoldProviderTest {
@@ -113,11 +115,32 @@ class ObolGoldProviderTest {
     }
 
     @Test
-    void accountBalanceIsWrittenExactly() {
+    void balanceIsTheWalletsSummedExactly() {
         player.balance = Coins.ofCopper(32504);
-        assertEquals("[#FFD700]3 gold[#C0C0C0] 25 silver[#B87333] 4 copper", reads(provider.amount(from)));
+        treasury.balance = Coins.of(Denomination.GOLD, 1);
+        assertEquals("[#FFD700]3 gold[#C0C0C0] 25 silver[#B87333] 4 copper", reads(provider.balance(from).message()));
+        assertEquals(new ObolBalance(Coins.ofCopper(42504)), provider.balance(to, from));
+        assertEquals(new ObolBalance(Coins.ZERO), provider.balance());
+        // The HUD redraws when the balance it took last differs from the one it takes now: by a copper.
+        Balance before = provider.balance(from, to);
+        assertEquals(before, provider.balance(from, to));
+        treasury.balance = treasury.balance.plus(Coins.ofCopper(1));
+        assertNotEquals(before, provider.balance(from, to));
         // While the coin count Aetherhaven spends from is rounded down.
         assertEquals(65, from.balance());
+    }
+
+    @Test
+    void balanceIsDrawnAsIsAtTheSizeOfTheLine() {
+        ObolBackendHolder.install(new InertBackend());
+        player.balance = Coins.ofCopper(32504);
+        UICommandBuilder builder = new UICommandBuilder();
+        provider.balance(from).show(builder, "#BalanceLine #Balance", 16);
+        String queued = commands(builder);
+        assertTrue(queued.contains("#BalanceLine #Balance #ObolCoins #Gold #Count.Text {\"0\": \"3\"}\n"), queued);
+        assertTrue(queued.contains("#Silver #Count.Text {\"0\": \"25\"}\n"), queued);
+        assertTrue(queued.contains("#Copper #Count.Text {\"0\": \"4\"}\n"), queued);
+        assertTrue(queued.contains("#Gold #Count.Style.FontSize {\"0\": 16}\n"), queued);
     }
 
     /** Obol "loaded" for {@code show}, which only checks that it is; nothing here is called. */

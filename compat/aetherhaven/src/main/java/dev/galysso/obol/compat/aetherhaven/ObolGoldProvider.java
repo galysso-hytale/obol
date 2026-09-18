@@ -1,5 +1,6 @@
 package dev.galysso.obol.compat.aetherhaven;
 
+import com.hexvane.aetherhaven.economy.api.Balance;
 import com.hexvane.aetherhaven.economy.api.EconomyProvider;
 import com.hexvane.aetherhaven.economy.api.GoldAccount;
 import com.hexvane.aetherhaven.economy.api.GoldSource;
@@ -29,10 +30,10 @@ import java.util.UUID;
 /**
  * Obol as Aetherhaven's economy. Accounts are Obol wallets through the
  * {@link Rate} (a player's own, one per town treasury, one per shop safe),
- * amounts are written ({@link ObolUi#message}, "2 gold 35 silver" in the
- * coins' colours) and drawn ({@link ObolUi#show}) as Obol coins, and gold
- * loot is whatever {@link GoldLoot} makes of the amount: never coin items,
- * Obol has no item.
+ * amounts and balances are written ({@link ObolUi#message}, "2 gold
+ * 35 silver" in the coins' colours) and drawn ({@link ObolUi#show}) as Obol
+ * coins, and gold loot is whatever {@link GoldLoot} makes of the amount:
+ * never coin items, Obol has no item.
  *
  * <p>The rate converts what Aetherhaven counts in its coins: prices, the
  * tithe, loot. What is stored is Obol coins, and a transfer a player asks
@@ -51,7 +52,7 @@ final class ObolGoldProvider implements EconomyProvider {
     static final String SAFE_KIND = "aetherhaven-safe";
 
     /** Aetherhaven's pages are small: only the tiers holding coins are drawn. */
-    private static final CoinsStyle DRAWN = CoinsStyle.DEFAULT.withZeroTiers(CoinsStyle.ZeroTiers.HIDDEN);
+    static final CoinsStyle DRAWN = CoinsStyle.DEFAULT.withZeroTiers(CoinsStyle.ZeroTiers.HIDDEN);
 
     private final Rate rate;
     private final GoldLoot loot;
@@ -135,16 +136,20 @@ final class ObolGoldProvider implements EconomyProvider {
         return ObolUi.message(rate.toCoins(amount));
     }
 
-    /** The wallet's balance as is, "3 gold 25 silver 4 copper", not rounded to a coin. */
-    @Nonnull
-    @Override
-    public Message amount(@Nonnull GoldAccount account) {
-        return ObolUi.message(((ObolGoldAccount) account).wallet().balance());
-    }
-
     /** The amount through the rate, drawn as Obol coins at the size of the line, "2 [gold] 5 [copper]" for 2g 5c. */
     @Override
     public void show(@Nonnull UICommandBuilder builder, @Nonnull String selector, long amount, int fontSize) {
         ObolUi.show(builder, selector, rate.toCoins(amount), DRAWN.withFontSize(fontSize));
+    }
+
+    /** What the wallets hold, summed as is, 3g 25s 4c for one holding 3g and one 25s 4c: never rounded to a coin. */
+    @Nonnull
+    @Override
+    public Balance balance(@Nonnull GoldAccount... accounts) {
+        Coins sum = Coins.ZERO;
+        for (GoldAccount account : accounts) {
+            sum = sum.plus(((ObolGoldAccount) account).wallet().balance());
+        }
+        return new ObolBalance(sum);
     }
 }
