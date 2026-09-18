@@ -1,6 +1,7 @@
 package dev.galysso.obol.compat.aetherhaven;
 
 import com.hexvane.aetherhaven.economy.api.Transfer;
+import com.hypixel.hytale.server.core.Message;
 import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.Denomination;
 import dev.galysso.obol.api.Wallet;
@@ -42,12 +43,27 @@ class ObolGoldProviderTest {
     private final ObolGoldAccount from = new ObolGoldAccount(player, Rate.DEFAULT);
     private final ObolGoldAccount to = new ObolGoldAccount(treasury, Rate.DEFAULT);
 
+    /** What a message reads as, each coloured span in its colour: "[#C0C0C0]4 silver[#B87333] 32 copper". */
+    private static String reads(Message message) {
+        StringBuilder out = new StringBuilder();
+        if (message.getColor() != null) {
+            out.append('[').append(message.getColor()).append(']');
+        }
+        if (message.getRawText() != null) {
+            out.append(message.getRawText());
+        }
+        for (Message child : message.getChildren()) {
+            out.append(reads(child));
+        }
+        return out.toString();
+    }
+
     @Test
     void transferMovesObolNotationAtObolPrecision() {
         player.balance = Coins.of(Denomination.GOLD, 3);
         Transfer moved = provider.transfer(from, to, "4s 32c");
         assertEquals(Transfer.Outcome.MOVED, moved.outcome());
-        assertEquals("4s 32c", moved.moved().getRawText());
+        assertEquals("[#C0C0C0]4 silver[#B87333] 32 copper", reads(moved.moved()));
         assertEquals(Coins.ofCopper(432), treasury.balance);
         assertEquals(Coins.of(Denomination.GOLD, 3).minus(Coins.ofCopper(432)).orElseThrow(), player.balance);
     }
@@ -88,13 +104,15 @@ class ObolGoldProviderTest {
     @Test
     void accountBalanceIsWrittenExactly() {
         player.balance = Coins.ofCopper(32504);
-        assertEquals("3g 25s 4c", provider.amount(from).getRawText());
+        assertEquals("[#FFD700]3 gold[#C0C0C0] 25 silver[#B87333] 4 copper", reads(provider.amount(from)));
         // While the coin count Aetherhaven spends from is rounded down.
         assertEquals(65, from.balance());
     }
 
     @Test
-    void coinCountsAreWrittenThroughTheRate() {
-        assertEquals("50s", provider.amount(10L).getRawText());
+    void coinCountsAreWrittenThroughTheRateInWordsAndColours() {
+        assertEquals("[#C0C0C0]50 silver", reads(provider.amount(10L)));
+        assertEquals("[#FFD700]2 gold[#C0C0C0] 5 silver", reads(provider.amount(41L)));
+        assertEquals("[#B87333]0 copper", reads(provider.amount(0L)));
     }
 }

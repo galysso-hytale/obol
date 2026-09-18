@@ -1,16 +1,22 @@
 package dev.galysso.obol.api;
 
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.ui.Anchor;
 import com.hypixel.hytale.server.core.ui.Value;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import dev.galysso.obol.api.internal.ObolBackendHolder;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
  * Coins drawn inside a page of your own, the way the HUD draws them: for
  * each tier, largest first, the count then the coin, in the coin's colour.
+ * And, for the places that hold text alone, coins written in words in the
+ * same colours ({@link #message}).
  *
  * <p>A page in Hytale is a tree of groups built by sending commands to a
  * {@link UICommandBuilder}; a mod's {@code CustomUIPage.build} receives
@@ -116,6 +122,40 @@ public final class ObolUi {
             throw new IllegalArgumentException("count must not be negative: " + count);
         }
         tier(builder, row(builder, selector, style), tier, count);
+    }
+
+    /**
+     * {@code coins} in words, for a place that holds text alone (a tooltip,
+     * a chat line, a notification): for each tier, largest first, the count
+     * and the tier's name in the tier's colour, {@code 2 gold 35 silver} for
+     * {@code 2g 35s}. What {@link Coins#toString()} writes, the name in
+     * place of the letter: tiers with no coins are left out, zero is
+     * {@code 0 copper}. Hytale draws no picture inside a text, so this is
+     * how an amount looks where {@link #show} cannot go.
+     *
+     * <p>A {@link Message} goes wherever the server takes one: a chat line,
+     * a notification, the {@code TextSpans} of a label, a parameter of a
+     * translated sentence ({@code "Costs {price} per piece"}). Each tier is
+     * its own coloured span, so the colour of the sentence around it stays
+     * on the words around it.</p>
+     *
+     * @param coins the amount to write
+     * @throws NullPointerException if {@code coins} is {@code null}
+     */
+    public static Message message(Coins coins) {
+        Objects.requireNonNull(coins, "coins");
+        List<Message> parts = new ArrayList<>();
+        EnumMap<Denomination, Long> breakdown = coins.breakdown();
+        Denomination[] all = Denomination.values();
+        for (int i = all.length - 1; i >= 0; i--) {
+            long count = breakdown.get(all[i]);
+            if (count == 0 && !(i == 0 && parts.isEmpty())) {
+                continue;
+            }
+            String words = (parts.isEmpty() ? "" : " ") + count + " " + all[i].name().toLowerCase(Locale.ROOT);
+            parts.add(Message.raw(words).color(all[i].color()));
+        }
+        return Message.join(parts.toArray(Message[]::new));
     }
 
     /** Puts the row into the caller's group and returns its selector. */

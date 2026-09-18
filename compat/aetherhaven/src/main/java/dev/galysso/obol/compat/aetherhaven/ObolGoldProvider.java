@@ -28,8 +28,10 @@ import java.util.UUID;
 /**
  * Obol as Aetherhaven's economy. Accounts are Obol wallets through the
  * {@link Rate} (a player's own, one per town treasury, one per shop safe),
- * amounts are written and drawn as Obol coins, and gold loot is whatever
- * {@link GoldLoot} makes of the amount: never coin items, Obol has no item.
+ * amounts are written ({@link ObolUi#message}, "2 gold 35 silver" in the
+ * coins' colours) and drawn ({@link ObolUi#show}) as Obol coins, and gold
+ * loot is whatever {@link GoldLoot} makes of the amount: never coin items,
+ * Obol has no item.
  *
  * <p>The rate converts what Aetherhaven counts in its coins: prices, the
  * tithe, loot. What is stored is Obol coins, and a transfer a player asks
@@ -119,20 +121,21 @@ final class ObolGoldProvider implements EconomyProvider {
         if (!source.transferTo(target, coins)) {
             return Transfer.NOT_AVAILABLE;
         }
-        return Transfer.moved(Message.raw(coins.toString()));
+        return Transfer.moved(ObolUi.message(coins));
     }
 
+    /** The amount through the rate, "5 silver" for one gold. */
     @Nonnull
     @Override
     public Message amount(long amount) {
-        return Message.raw(rate.toCoins(amount).toString());
+        return ObolUi.message(rate.toCoins(amount));
     }
 
-    /** The wallet's balance as is, "3g 25s 4c", not rounded to a coin. */
+    /** The wallet's balance as is, "3 gold 25 silver 4 copper", not rounded to a coin. */
     @Nonnull
     @Override
     public Message amount(@Nonnull GoldAccount account) {
-        return Message.raw(((ObolGoldAccount) account).wallet().balance().toString());
+        return ObolUi.message(((ObolGoldAccount) account).wallet().balance());
     }
 
     @Override
