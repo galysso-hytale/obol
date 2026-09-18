@@ -8,7 +8,7 @@ generated: `python3 tools/curseforge.py docs/icon.png` for the logo,
 the editor (or serve it from the repository) and put its URL in the
 image line.
 
-**Title:** Obol - Minimalist RPG Currency
+**Title:** Obol
 
 **Summary (236/256):** Minimalist RPG-style currency and economy core for
 Hytale: four coins, a balance per player, and nothing you didn't ask for.

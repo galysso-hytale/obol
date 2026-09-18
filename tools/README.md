@@ -18,7 +18,8 @@ sheets (`_*_apercu.png`, `_*_check.png`) go to `tmp/`, which is ignored.
 | `backpack_tag.py` | addons/trade | The "from the backpack" mark on offer slots. |
 | `offer_panel.py` | addons/trade | The 9-patch behind "what I give". |
 | `offer_slot.py` | addons/trade | The tinted slot background of my offer. |
-| `curseforge.py <icon.png> [--tint <addon>]` | any | The mod page logo: the icon on the shared opaque plate, `curseforge.png` next to the icon. |
+| `curseforge.py <icon.png> [--tint <addon>] [-o <out>]` | any | The mod page logo: the icon on the shared opaque plate, `curseforge.png` next to the icon or at `-o`. Obol: `docs/curseforge.png` from `docs/icon.png`. |
+| `lootbag_logo.py` | addons/lootbag | The five bags piled on the plate tinted lootbag, `addons/lootbag/docs/curseforge.png`. |
 | `coins_strip.py` | docs | The four coins in a row on the same plate, `docs/coins.png`, for the CurseForge description (`docs/curseforge.md`). |
 
 `purse.py`, `qualities.py`, `halos.py` and `offer_slot.py` read vanilla

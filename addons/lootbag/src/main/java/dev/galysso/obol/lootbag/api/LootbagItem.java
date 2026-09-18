@@ -49,7 +49,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p>Public so that another mod can hand out lootbags (a quest reward, a
  * loot of its own turned into coins) the same way the drop tables do:
  * {@link #rarityOf} names the rarity of a value under this server's laws,
- * and {@link #bag} writes a bag of a rarity as the tables write theirs.</p>
+ * {@link #bag} writes a bag of a rarity as the tables write theirs, and
+ * {@link #stack(Rarity, LootLaw, int)} a bag of a law of the mod's own
+ * (an exact refund) as bags open on this server.</p>
  */
 public final class LootbagItem {
 
@@ -186,6 +188,18 @@ public final class LootbagItem {
             law = LootLaw.fixed(law.roll(ThreadLocalRandom.current()::nextDouble));
         }
         return stack(rarity, law, 1, config.openOn());
+    }
+
+    /**
+     * {@return a stack of {@code quantity} bags of that rarity carrying
+     * {@code law}, as bags open on this server (the {@code OpenOn} of
+     * {@code lootbag.json}, {@code Use} until the lootbag plugin has set up)}
+     *
+     * @param law      what a bag gives when opened
+     * @param quantity 1 to the item's {@code MaxStack}
+     */
+    public static ItemStack stack(Rarity rarity, LootLaw law, int quantity) {
+        return stack(rarity, law, quantity, LootbagConfig.server().openOn());
     }
 
     /**

@@ -1,7 +1,7 @@
 package dev.galysso.obol.compat.aetherhaven;
 
 import com.hexvane.aetherhaven.economy.api.AetherhavenEconomy;
-import com.hexvane.aetherhaven.economy.api.LootSource;
+import com.hexvane.aetherhaven.economy.api.GoldSource;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -23,9 +23,12 @@ import java.util.List;
  * {@link #shutdown()} takes it back.</p>
  *
  * <p>The lootbag add-on is optional. With it, the lootbag's own tables
- * cover dungeon chests and a broken pot gives a bag of the rarity its roll
- * is worth ({@link LootbagLoot}). Without it, Aetherhaven's gold loot is
- * off: Obol has no coin item to drop.</p>
+ * cover dungeon chests, a broken pot gives a bag of the rarity its roll is
+ * worth and a salvaged plot token a bag of its exact refund
+ * ({@link LootbagLoot}). Without it, Obol has no item to hand out:
+ * Aetherhaven's gold loot is off and its coin recipes are hidden.
+ * Aetherhaven itself deposits coin items a player still comes to hold
+ * (old stock) and keeps the coin out of what villagers want.</p>
  */
 public class ObolAetherhavenPlugin extends JavaPlugin {
 
@@ -52,13 +55,11 @@ public class ObolAetherhavenPlugin extends JavaPlugin {
         boolean lootbag = lootbagPresent();
         provider = new ObolGoldProvider(rate, lootbag ? new LootbagLoot(rate) : ObolAetherhavenPlugin::noLoot);
         AetherhavenEconomy.register(provider);
-        // Coin items the game still makes (salvage, gifts, old stock) become coins on pickup.
-        getEntityStoreRegistry().registerSystem(new CoinItemAbsorbSystem(provider, rate, getLogger()));
         getLogger().atInfo().log("Aetherhaven pays in Obol coins, one gold coin = %s, %s",
-                rate.coin(), lootbag ? "broken pots drop lootbags, chests are the lootbag's" : "no gold loot without the lootbag");
+                rate.coin(), lootbag ? "pots and salvage give lootbags, chests are the lootbag's" : "no gold as items without the lootbag");
     }
 
-    private static List<ItemStack> noLoot(LootSource source, long amount) {
+    private static List<ItemStack> noLoot(GoldSource source, long amount) {
         return List.of();
     }
 
