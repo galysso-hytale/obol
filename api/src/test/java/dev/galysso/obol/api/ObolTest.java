@@ -50,6 +50,11 @@ class ObolTest {
         }
 
         @Override
+        public void hud(boolean shown) {
+            calls.add("hud " + shown);
+        }
+
+        @Override
         public void addListener(CoinsListener listener) {
             calls.add("add");
         }
@@ -110,6 +115,7 @@ class ObolTest {
                 () -> Obol.playerWallet(player),
                 () -> Obol.show(player, ScreenPosition.topRight(1, 1), Coins.ZERO),
                 () -> Obol.track(player, ScreenPosition.topRight(1, 1), new InertWallet()),
+                () -> Obol.hud(false),
                 () -> Obol.addListener(event -> { }),
                 () -> Obol.removeListener(event -> { }))) {
             IllegalStateException e = assertThrows(IllegalStateException.class, call::run);
@@ -131,6 +137,7 @@ class ObolTest {
         assertSame(backend.wallet, Obol.playerWallet(player));
         assertSame(backend.overlay, Obol.show(player, corner, Coins.ofCopper(5)));
         assertSame(backend.overlay, Obol.track(player, corner, backend.wallet));
+        Obol.hud(false);
         Obol.addListener(listener);
         assertTrue(Obol.removeListener(listener));
 
@@ -139,6 +146,7 @@ class ObolTest {
                 "wallet player:8f0c1d2e-3a4b-4c5d-8e6f-7a8b9c0d1e2f",
                 "show 5c",
                 "track test:inert",
+                "hud false",
                 "add",
                 "remove"),
                 backend.calls);

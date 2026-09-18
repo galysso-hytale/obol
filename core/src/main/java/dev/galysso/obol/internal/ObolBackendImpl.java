@@ -9,6 +9,7 @@ import dev.galysso.obol.api.WalletId;
 import dev.galysso.obol.api.internal.ObolBackend;
 import dev.galysso.obol.ui.CoinsDisplayImpl;
 import dev.galysso.obol.ui.OverlayHuds;
+import dev.galysso.obol.ui.PlayerHuds;
 
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ public final class ObolBackendImpl implements ObolBackend {
     private final BalanceStoreImpl store = new BalanceStoreImpl();
     private final Listeners listeners;
     private final CoinsDisplayImpl display;
+    private final PlayerHuds playerHuds;
 
     /**
      * @param listenerFailures where a listener that throws is reported
@@ -31,6 +33,7 @@ public final class ObolBackendImpl implements ObolBackend {
     public ObolBackendImpl(Listeners.FailureReporter listenerFailures, OverlayHuds huds) {
         this.listeners = new Listeners(listenerFailures);
         this.display = new CoinsDisplayImpl(huds, listeners);
+        this.playerHuds = new PlayerHuds(this);
     }
 
     /** Covariant on purpose: the commands reach {@link WalletImpl#set}. */
@@ -50,6 +53,11 @@ public final class ObolBackendImpl implements ObolBackend {
     }
 
     @Override
+    public void hud(boolean shown) {
+        playerHuds.shown(shown);
+    }
+
+    @Override
     public void addListener(CoinsListener listener) {
         listeners.add(listener);
     }
@@ -57,6 +65,11 @@ public final class ObolBackendImpl implements ObolBackend {
     @Override
     public boolean removeListener(CoinsListener listener) {
         return listeners.remove(listener);
+    }
+
+    /** Obol's own HUD, for the plugin to forward ready events and disconnects to. */
+    public PlayerHuds playerHuds() {
+        return playerHuds;
     }
 
     /** The display, for the plugin to forward disconnects to. */

@@ -148,6 +148,7 @@ class ObolGoldProviderTest {
         @Override public Wallet wallet(WalletId id) { throw new UnsupportedOperationException(); }
         @Override public CoinsOverlay show(UUID viewer, ScreenPosition position, Coins coins) { throw new UnsupportedOperationException(); }
         @Override public CoinsOverlay track(UUID viewer, ScreenPosition position, Wallet wallet) { throw new UnsupportedOperationException(); }
+        @Override public void hud(boolean shown) { throw new UnsupportedOperationException(); }
         @Override public void addListener(CoinsListener listener) { throw new UnsupportedOperationException(); }
         @Override public boolean removeListener(CoinsListener listener) { throw new UnsupportedOperationException(); }
     }

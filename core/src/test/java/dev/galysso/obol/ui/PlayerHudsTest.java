@@ -93,6 +93,11 @@ class PlayerHudsTest {
         }
 
         @Override
+        public void hud(boolean shown) {
+            throw new UnsupportedOperationException("the HUD asks the backend nothing");
+        }
+
+        @Override
         public void addListener(CoinsListener listener) {
             throw new UnsupportedOperationException();
         }
@@ -128,6 +133,31 @@ class PlayerHudsTest {
 
         assertEquals(2, backend.calls.size());
         assertTrue(backend.calls.stream().allMatch(c -> c.startsWith("track")));
+    }
+
+    @Test
+    void aModTakesTheHudDownForEveryoneAndPutsItBack() {
+        UUID other = UUID.randomUUID();
+        backend.online.add(player);
+        backend.online.add(other);
+        huds.onReady(player);
+
+        huds.shown(false);
+        huds.shown(false);      // already down: nothing
+        huds.onReady(other);    // arrives while it is down: none for them either
+        assertEquals(List.of("track player:" + player + " at Top: 20, Right: 20", "hide"), backend.calls);
+
+        backend.calls.clear();
+        huds.shown(true);       // back for both, the one who arrived meanwhile included
+        huds.onReady(player);   // a world change: still there
+        assertEquals(2, backend.calls.size());
+        assertTrue(backend.calls.stream().allMatch(c -> c.startsWith("track player:")), backend.calls.toString());
+
+        backend.calls.clear();
+        huds.onDisconnect(other);
+        huds.shown(false);
+        huds.shown(true);       // the one who left does not come back
+        assertEquals(List.of("hide", "track player:" + player + " at Top: 20, Right: 20"), backend.calls);
     }
 
     @Test

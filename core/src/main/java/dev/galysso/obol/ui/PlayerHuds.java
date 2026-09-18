@@ -5,18 +5,22 @@ import dev.galysso.obol.api.ScreenPosition;
 import dev.galysso.obol.api.WalletId;
 import dev.galysso.obol.api.internal.ObolBackend;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Obol's own HUD: every player's balance, tracked, for as long as they are
  * in a world. The first consumer of {@code Obol.track}, through the
  * {@link ObolBackend} directly.
  *
- * <p>Always on: the HUD is the only way a player sees their balance, so
- * there is nothing to opt out of. The overlay does not outlive the session;
+ * <p>Up by default, the HUD is how a player sees their balance. A mod that
+ * draws the balance in a HUD of its own takes it down for everyone
+ * ({@link #shown}); the players in a world are remembered meanwhile, so
+ * that it comes back for them. The overlay does not outlive the session;
  * it is put back each time the player is ready in a world.</p>
  */
 public final class PlayerHuds {
@@ -25,7 +29,10 @@ public final class PlayerHuds {
     static final ScreenPosition POSITION = ScreenPosition.topRight(20, 20);
 
     private final ObolBackend backend;
-    private final Map<UUID, CoinsOverlay> shown = new ConcurrentHashMap<>();
+    /** The players in a world, whether or not their HUD is up. */
+    private final Set<UUID> inWorld = new HashSet<>();
+    private final Map<UUID, CoinsOverlay> overlays = new HashMap<>();
+    private boolean shown = true;
 
     public PlayerHuds(ObolBackend backend) {
         this.backend = Objects.requireNonNull(backend, "backend");
@@ -33,22 +40,47 @@ public final class PlayerHuds {
 
     /**
      * The player is in a world: put the HUD up, unless it is still there
-     * (a world change within one session). Nobody else hides this overlay,
-     * so an entry in the map means it is on the screen until the session
-     * ends and {@link #onDisconnect} removes it.
+     * (a world change within one session) or a mod took it down. Nobody
+     * else hides this overlay, so an entry in the map means it is on the
+     * screen until the session ends and {@link #onDisconnect} removes it.
      *
      * @throws IllegalArgumentException if the display does not see the
      *                                  player yet
      */
-    public void onReady(UUID player) {
-        if (shown.containsKey(player)) {
-            return;
+    public synchronized void onReady(UUID player) {
+        if (shown && !overlays.containsKey(player)) {
+            overlays.put(player, track(player));
         }
-        shown.put(player, backend.track(player, POSITION, backend.wallet(WalletId.player(player))));
+        inWorld.add(player);
     }
 
     /** The session is over; the display has already dropped the overlay. */
-    public void onDisconnect(UUID player) {
-        shown.remove(player);
+    public synchronized void onDisconnect(UUID player) {
+        inWorld.remove(player);
+        overlays.remove(player);
+    }
+
+    /**
+     * Takes the HUD down for every player in a world and keeps it down, or
+     * puts it back for all of them. Nothing happens when it already is as
+     * asked.
+     */
+    public synchronized void shown(boolean shown) {
+        if (this.shown == shown) {
+            return;
+        }
+        this.shown = shown;
+        if (shown) {
+            for (UUID player : inWorld) {
+                overlays.put(player, track(player));
+            }
+        } else {
+            overlays.values().forEach(CoinsOverlay::hide);
+            overlays.clear();
+        }
+    }
+
+    private CoinsOverlay track(UUID player) {
+        return backend.track(player, POSITION, backend.wallet(WalletId.player(player)));
     }
 }

@@ -15,7 +15,6 @@ import dev.galysso.obol.internal.BalancesPersistence;
 import dev.galysso.obol.internal.BalancesState;
 import dev.galysso.obol.internal.ConfigBalancesBackend;
 import dev.galysso.obol.internal.ObolBackendImpl;
-import dev.galysso.obol.ui.PlayerHuds;
 import dev.galysso.obol.ui.ServerHuds;
 
 import javax.annotation.Nonnull;
@@ -33,7 +32,6 @@ public class ObolPlugin extends JavaPlugin {
     private final ObolBackendImpl backend;
     private final Config<BalancesState> balancesFile;
     private final BalancesPersistence persistence;
-    private final PlayerHuds playerHuds;
     private ScheduledFuture<?> periodicSave;
     private volatile boolean loaded;
 
@@ -47,7 +45,6 @@ public class ObolPlugin extends JavaPlugin {
         // once the plugin state has moved on.
         balancesFile = withConfig("balances", BalancesState.CODEC);
         persistence = new BalancesPersistence(backend.storedBalances(), new ConfigBalancesBackend(balancesFile));
-        playerHuds = new PlayerHuds(backend);
         // Published from the constructor, not setup(): dependent plugins may
         // already be calling the API by the time our own setup() runs.
         ObolBackendHolder.install(backend);
@@ -85,7 +82,7 @@ public class ObolPlugin extends JavaPlugin {
         getEventRegistry().register(PlayerDisconnectEvent.class, event -> {
             UUID player = event.getPlayerRef().getUuid();
             backend.display().onDisconnect(player);
-            playerHuds.onDisconnect(player);
+            backend.playerHuds().onDisconnect(player);
             saveIfDirty("player disconnect");
         });
         periodicSave = HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(
@@ -114,7 +111,7 @@ public class ObolPlugin extends JavaPlugin {
     /** Never throws: an event handler that throws breaks the other handlers. */
     private void onReady(UUID player) {
         try {
-            playerHuds.onReady(player);
+            backend.playerHuds().onReady(player);
         } catch (RuntimeException e) {
             getLogger().atWarning().withCause(e).log("Could not restore the balance HUD of %s", player);
         }

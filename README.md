@@ -185,8 +185,11 @@ Package `dev.galysso.obol.api`. No method accepts `null`
 Obol is not loaded (missing or misordered manifest dependency).
 `wallet(WalletId)`, `playerWallet(UUID)` (= `wallet(WalletId.player(uuid))`),
 `show(viewer, position, coins)` and `track(viewer, position, wallet)` →
-`CoinsOverlay`, `addListener(l)` (twice = called twice), `removeListener(l)`
-→ `boolean`.
+`CoinsOverlay`, `hud(boolean)` (whether Obol's own HUD, every player's
+balance at the top right, is up: a mod that draws the balance in a HUD of
+its own calls `hud(false)` from its `setup()`, server wide, last call
+wins), `addListener(l)` (twice = called twice), `removeListener(l)` →
+`boolean`.
 
 **`ObolUi`** — static, `IllegalStateException` if Obol is not loaded.
 `show(builder, selector, coins[, style])` and `show(builder, selector, tier,

@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.util.Config;
+import dev.galysso.obol.api.Obol;
 
 import javax.annotation.Nonnull;
 import java.nio.file.Files;
@@ -19,8 +20,9 @@ import java.util.List;
  *
  * <p>Obol and Aetherhaven are manifest dependencies, so both are set up
  * before this plugin: Obol's API is installed and Aetherhaven's registry is
- * ready to take a provider. {@link #setup()} registers Obol as the economy,
- * {@link #shutdown()} takes it back.</p>
+ * ready to take a provider. {@link #setup()} registers Obol as the economy
+ * and takes Obol's own HUD down, Aetherhaven's draws the balance;
+ * {@link #shutdown()} undoes both.</p>
  *
  * <p>The lootbag add-on is optional. With it, the lootbag's own tables
  * cover dungeon chests, a broken pot gives a bag of the rarity its roll is
@@ -55,6 +57,8 @@ public class ObolAetherhavenPlugin extends JavaPlugin {
         boolean lootbag = lootbagPresent();
         provider = new ObolGoldProvider(rate, lootbag ? new LootbagLoot(rate) : ObolAetherhavenPlugin::noLoot);
         AetherhavenEconomy.register(provider);
+        // Aetherhaven's HUD draws the balance (the player's and their town's together): one HUD is enough.
+        Obol.hud(false);
         getLogger().atInfo().log("Aetherhaven pays in Obol coins, one gold coin = %s, %s",
                 rate.coin(), lootbag ? "pots and salvage give lootbags, chests are the lootbag's" : "no gold as items without the lootbag");
     }
@@ -82,6 +86,7 @@ public class ObolAetherhavenPlugin extends JavaPlugin {
         if (provider != null) {
             AetherhavenEconomy.unregister(provider);
             provider = null;
+            Obol.hud(true);
         }
     }
 }

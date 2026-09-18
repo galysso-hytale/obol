@@ -107,6 +107,27 @@ public final class Obol {
     }
 
     /**
+     * Whether Obol puts its own HUD up: every player's balance, tracked, at
+     * the top right of their screen from the moment they are in a world. Up
+     * by default.
+     *
+     * <p>A mod that draws every player's balance itself, in a HUD of its
+     * own, takes Obol's down from its {@code setup()}: {@code hud(false)}
+     * removes it from the screen of the players in a world and keeps it
+     * off the next ones, {@code hud(true)} puts it back for all of them.
+     * Server wide, and the last call wins whoever made it: two mods that
+     * both draw the balance agree between themselves, Obol keeps no
+     * count. The overlays of {@link #show} and {@link #track} are not
+     * concerned.</p>
+     *
+     * @param shown whether Obol's HUD is on the players' screens
+     * @throws IllegalStateException if Obol is not loaded
+     */
+    public static void hud(boolean shown) {
+        ObolBackendHolder.require().hud(shown);
+    }
+
+    /**
      * Subscribes to balance changes of every wallet.
      *
      * <p>Listeners run synchronously on the thread that moved the money,

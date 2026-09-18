@@ -30,6 +30,9 @@ public interface ObolBackend {
     /** See {@link Obol#track(UUID, ScreenPosition, Wallet)}. */
     CoinsOverlay track(UUID viewer, ScreenPosition position, Wallet wallet);
 
+    /** See {@link Obol#hud(boolean)}. */
+    void hud(boolean shown);
+
     /** See {@link Obol#addListener(CoinsListener)}. */
     void addListener(CoinsListener listener);
 
