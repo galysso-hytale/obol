@@ -3,7 +3,9 @@
 // so that an amount looks the same everywhere. Appended into the row
 // ObolUi puts in the caller's group; the count is set through
 // "#Gold #Count.Text", and its column, sized for two digits, is widened
-// through "#Gold #Count.Anchor" when there are more. TextColor is
+// through "#Gold #Count.Anchor" when there are more. A row drawn for a
+// smaller line of text (CoinsStyle.fontSize) has "#Count.Style.FontSize"
+// and the anchors of "#Count" and "#Coin" scaled down. TextColor is
 // Denomination.GOLD.color().
 @Count = (FontSize: 22, TextColor: #FFD700, RenderBold: true, HorizontalAlignment: End, VerticalAlignment: Center);
 
@@ -16,7 +18,7 @@ Group #Gold {
     Style: @Count;
   }
 
-  Group {
+  Group #Coin {
     Background: (TexturePath: "../Gold.png");
     Anchor: (Width: 24, Height: 24, Left: 3, Right: 8);
   }

@@ -153,8 +153,12 @@ the same pill as the HUD, centred (a `CoinsStyle` moves it to the start or
 the end of the group); `show(builder, selector, tier, count)` draws one tier
 alone, even at zero, for a page that lays tiers out itself. The group takes
 the width of its content and the height you give it (the coins are 24
-pixels high). Fill a group once, and `clear` it before filling it again.
-The pictures and colours are Obol's; a mod never has to draw a coin.
+pixels high, and `CoinsStyle.DEFAULT.withFontSize(13)` scales them to a line
+of 13 pixel text). Fill a group once, and `clear` it before filling it
+again. The pictures and colours are Obol's; a mod never has to draw a coin.
+Where only text can go (a tooltip, a chat line, a notification),
+`ObolUi.message(coins)` writes the amount in words, each tier in its colour:
+"2 gold 35 silver". Hytale draws no picture inside a text.
 
 The coin images themselves are also part of the API, for the rare document
 that needs one outside an amount: `Denomination.texture()` gives the path of
@@ -188,12 +192,15 @@ Obol is not loaded (missing or misordered manifest dependency).
 `show(builder, selector, coins[, style])` and `show(builder, selector, tier,
 count[, style])` queue the commands that draw the coins into the group at
 `selector` (count then coin per tier, largest first, the HUD's rule for
-which tiers appear). The only class of the API that names a server type
-(`UICommandBuilder`).
+which tiers appear); `message(coins)` → `Message`, the amount in words,
+one coloured span per tier. The only class of the API that names server
+types (`UICommandBuilder`, `Message`).
 
-**`CoinsStyle`** — a record, `DEFAULT` (centred) and
-`withAlignment(START | CENTER | END)`. Options may be added, each with a
-default.
+**`CoinsStyle`** — a record, `DEFAULT` (centred, the HUD's 22 pixel
+digits, zero tiers shown), `withAlignment(START | CENTER | END)`,
+`withFontSize(int)` (the coins two pixels taller than the digits) and
+`withZeroTiers(SHOWN | HIDDEN)` (`HIDDEN` draws only the tiers holding
+coins, for a small page). Options may be added, each with a default.
 
 **`Wallet`** — a stateless handle, equal to any other with the same `id()`.
 `balance()`, `canAfford(c)` (read-only hint; trust `withdraw` instead),

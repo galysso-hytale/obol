@@ -33,11 +33,15 @@ import java.util.Objects;
  * }</pre>
  *
  * <p>The group sizes itself to its content in width; its height is yours
- * (the coins are 24 pixels high). The tiers shown follow the HUD's rule:
+ * (the coins are 24 pixels high at the HUD's size, and a
+ * {@link CoinsStyle#withFontSize font size} scales them to a line of
+ * text). The tiers shown follow the HUD's rule:
  * tiers above the largest one holding coins are left out, every tier below
  * it is shown even at zero ({@code 2 [gold] 0 [silver] 5 [copper]} for
- * {@code 2g 5c}), and zero is {@code 0 [copper]}. The pictures and colours
- * are Obol's, so a price looks the same in every mod and in the HUD.</p>
+ * {@code 2g 5c}), and zero is {@code 0 [copper]}; a small page may
+ * {@link CoinsStyle#withZeroTiers leave the zero tiers out}. The pictures
+ * and colours are Obol's, so a price looks the same in every mod and in
+ * the HUD.</p>
  *
  * <p>The group is filled once; a page rebuilt from scratch calls this
  * again. To change an amount in place, {@link UICommandBuilder#clear clear}
@@ -55,8 +59,13 @@ public final class ObolUi {
     private static final String DOCUMENTS = "Obol/Coins/";
     /** Digits a count column holds without growing. */
     private static final int COLUMN_DIGITS = 2;
-    /** Width of one digit at the counts' font size, in UI pixels. */
+    /** Width of one digit at the HUD's font size, in UI pixels. */
     private static final int DIGIT_WIDTH = 15;
+    /** How much taller than the digits a coin is drawn, in UI pixels. */
+    private static final int COIN_OVER_FONT = 2;
+    /** Margins of a coin at the HUD's font size, in UI pixels. */
+    private static final int COIN_LEFT = 3;
+    private static final int COIN_RIGHT = 8;
 
     private ObolUi() {
     }
@@ -89,8 +98,10 @@ public final class ObolUi {
         boolean started = false;
         for (int i = all.length - 1; i >= 0; i--) {
             long count = parts.get(all[i]);
-            if (count != 0 || started || i == 0) {
-                tier(builder, row, all[i], count);
+            // A zero tier is drawn below the largest tier holding coins (SHOWN), or only as "0 copper" (HIDDEN).
+            boolean zeroShown = style.zeroTiers() == CoinsStyle.ZeroTiers.SHOWN ? started || i == 0 : i == 0 && !started;
+            if (count != 0 || zeroShown) {
+                tier(builder, row, all[i], count, style);
                 started = true;
             }
         }
@@ -121,7 +132,7 @@ public final class ObolUi {
         if (count < 0) {
             throw new IllegalArgumentException("count must not be negative: " + count);
         }
-        tier(builder, row(builder, selector, style), tier, count);
+        tier(builder, row(builder, selector, style), tier, count, style);
     }
 
     /**
@@ -173,17 +184,36 @@ public final class ObolUi {
         return selector + " " + ROW;
     }
 
-    /** Appends one tier's document into the row and sets its count. */
-    private static void tier(UICommandBuilder builder, String row, Denomination tier, long count) {
+    /** Appends one tier's document into the row, sets its count and sizes it to the style. */
+    private static void tier(UICommandBuilder builder, String row, Denomination tier, long count, CoinsStyle style) {
         builder.append(row, DOCUMENTS + tier.fileName() + ".ui");
-        String countSelector = row + " #" + tier.fileName() + " #Count";
+        String tierSelector = row + " #" + tier.fileName();
+        String countSelector = tierSelector + " #Count";
         String digits = Long.toString(count);
         builder.set(countSelector + ".Text", digits);
-        if (digits.length() > COLUMN_DIGITS) {
-            // The document's column is sized for two digits; widen it to fit.
-            Anchor anchor = new Anchor();
-            anchor.setWidth(Value.of(digits.length() * DIGIT_WIDTH));
-            builder.setObject(countSelector + ".Anchor", anchor);
+        boolean scaled = style.fontSize() != CoinsStyle.HUD_FONT_SIZE;
+        if (scaled) {
+            builder.set(countSelector + ".Style.FontSize", style.fontSize());
         }
+        if (scaled || digits.length() > COLUMN_DIGITS) {
+            // The document's column is sized for two digits at the HUD's size.
+            Anchor column = new Anchor();
+            column.setWidth(Value.of(scaled(Math.max(digits.length(), COLUMN_DIGITS) * DIGIT_WIDTH, style)));
+            builder.setObject(countSelector + ".Anchor", column);
+        }
+        if (scaled) {
+            int size = style.fontSize() + COIN_OVER_FONT;
+            Anchor coin = new Anchor();
+            coin.setWidth(Value.of(size));
+            coin.setHeight(Value.of(size));
+            coin.setLeft(Value.of(scaled(COIN_LEFT, style)));
+            coin.setRight(Value.of(scaled(COIN_RIGHT, style)));
+            builder.setObject(tierSelector + " #Coin.Anchor", coin);
+        }
+    }
+
+    /** A length of the HUD's size brought to the style's font size. */
+    private static int scaled(int atHudSize, CoinsStyle style) {
+        return Math.round(atHudSize * style.fontSize() / (float) CoinsStyle.HUD_FONT_SIZE);
     }
 }

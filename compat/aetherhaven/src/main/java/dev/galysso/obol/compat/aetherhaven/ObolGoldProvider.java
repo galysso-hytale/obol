@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.galysso.obol.api.Coins;
 import dev.galysso.obol.api.CoinsParseException;
+import dev.galysso.obol.api.CoinsStyle;
 import dev.galysso.obol.api.Obol;
 import dev.galysso.obol.api.ObolUi;
 import dev.galysso.obol.api.Wallet;
@@ -48,6 +49,9 @@ final class ObolGoldProvider implements EconomyProvider {
     /** Wallet kinds of the town ledgers, keyed by the town's UUID, and by town and player for a safe. */
     static final String TREASURY_KIND = "aetherhaven";
     static final String SAFE_KIND = "aetherhaven-safe";
+
+    /** Aetherhaven's pages are small: only the tiers holding coins are drawn. */
+    private static final CoinsStyle DRAWN = CoinsStyle.DEFAULT.withZeroTiers(CoinsStyle.ZeroTiers.HIDDEN);
 
     private final Rate rate;
     private final GoldLoot loot;
@@ -138,8 +142,9 @@ final class ObolGoldProvider implements EconomyProvider {
         return ObolUi.message(((ObolGoldAccount) account).wallet().balance());
     }
 
+    /** The amount through the rate, drawn as Obol coins at the size of the line, "2 [gold] 5 [copper]" for 2g 5c. */
     @Override
-    public void show(@Nonnull UICommandBuilder builder, @Nonnull String selector, long amount) {
-        ObolUi.show(builder, selector, rate.toCoins(amount));
+    public void show(@Nonnull UICommandBuilder builder, @Nonnull String selector, long amount, int fontSize) {
+        ObolUi.show(builder, selector, rate.toCoins(amount), DRAWN.withFontSize(fontSize));
     }
 }
